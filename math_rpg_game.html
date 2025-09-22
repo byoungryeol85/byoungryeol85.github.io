@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연산RPG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 800px;
+            height: 600px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: none;
+            padding: 40px;
+            position: relative;
+        }
+
+        .screen.active {
+            display: block !important;
+        }
+
+        .screen:not(.active) {
+            display: none !important;
+        }
+
+        /* 타이틀 화면 */
+        .title-screen {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .title-screen:not(.active) {
+            display: none !important;
+        }
+
+        .title-screen h1 {
+            font-size: 4em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .title-screen p {
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+
+        /* 스테이지 선택 화면 */
+        .stage-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .stage-card {
+            background: linear-gradient(45deg, #FFE0B2, #FFCC02);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+        }
+
+        .stage-card:hover {
+            transform: scale(1.05);
+            border-color: #FF9800;
+        }
+
+        .stage-card.locked {
+            background: #E0E0E0;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .stage-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #E65100;
+        }
+
+        .stage-card p {
+            font-size: 0.9em;
+            color: #BF360C;
+        }
+
+        /* 전투 준비 화면 */
+        .battle-prep {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .battle-prep-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex: 1;
+        }
+
+        .monster-info, .player-info {
+            width: 45%;
+            text-align: center;
+        }
+
+        .monster {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .vs {
+            font-size: 3em;
+            font-weight: bold;
+            color: #FF5722;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* 전투 화면 새로운 레이아웃 */
+        .battle-screen {
+            padding: 15px;
+            display: grid;
+            grid-template-rows: auto auto 1fr auto auto;
+            gap: 20px;
+            height: calc(100% - 30px);
+        }
+
+        /* 상단 정보 영역 */
+        .battle-top {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .player-stats, .monster-stats {
+            background: #F8F9FA;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #DEE2E6;
+        }
+
+        .player-stats h3, .monster-stats h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.1em;
+            color: #495057;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #6C757D;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 25px;
+            background: #E9ECEF;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid #ADB5BD;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28A745, #20C997);
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .health-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            font-size: 0.9em;
+        }
+
+        .game-info {
+            text-align: center;
+            background: #E3F2FD;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #BBDEFB;
+        }
+
+        .stage-info {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1976D2;
+            margin-bottom: 5px;
+        }
+
+        .turn-info {
+            font-size: 1em;
+            color: #424242;
+            margin-bottom: 8px;
+        }
+
+        .timer-display {
+            font-size: 2em;
+            font-weight: bold;
+            color: #D32F2F;
+            background: rgba(211, 47, 47, 0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        /* 캐릭터 영역 */
+        .character-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #E8F5E8, #F3E5F5);
+            border-radius: 15px;
+            border: 2px solid #C8E6C9;
+        }
+
+        .player-character, .monster-character {
+            text-align: center;
+            flex: 1;
+        }
+
+        .character-sprite {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4.5em;
+            margin: 0 auto 15px;
+            border: 4px solid #FFF;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .player-sprite {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+        }
+
+        .monster-sprite {
+            background: linear-gradient(45deg, #FF5722, #FF8A65);
+        }
+
+        .character-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .vs-text {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #FF5722;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin: 0 20px;
+        }
+
+        /* 문제 영역 */
+        .problem-area {
+            background: #FFFFFF;
+            border: 3px solid #007BFF;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .problem-text {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #212529;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            word-break: break-all;
+        }
+
+        /* 입력 영역 */
+        .input-area {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .answer-input {
+            font-size: 2.2em;
+            padding: 15px 25px;
+            border: 3px solid #28A745;
+            border-radius: 12px;
+            text-align: center;
+            width: 250px;
+            outline: none;
+            background: #FFFFFF;
+            color: #212529;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .answer-input:focus {
+            border-color: #FF6B35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+        }
+
+        .submit-btn {
+            font-size: 1.4em;
+            padding: 18px 35px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            min-width: 120px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .submit-btn:hover {
+            background: #0056B3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+            background: #004085;
+        }
+
+        /* 턴 전환 오버레이 */
+        .turn-change-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .turn-change-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .turn-change-text {
+            font-size: 3em;
+            font-weight: bold;
+            color: #FF5722;
+            background: white;
+            padding: 30px 50px;
+            border-radius: 20px;
+            border: 4px solid #FF5722;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: pulse 0.6s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* 피드백 오버레이 */
+        .feedback-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .feedback-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .feedback-overlay::before {
+            content: attr(data-text);
+            font-size: 3em;
+            font-weight: bold;
+            padding: 30px 50px;
+            background: white;
+            border-radius: 20px;
+            border: 4px solid;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .feedback-overlay.correct::before {
+            color: #28A745;
+            border-color: #28A745;
+        }
+
+        .feedback-overlay.incorrect::before {
+            color: #DC3545;
+            border-color: #DC3545;
+        }
+
+        /* 승리 연출 오버레이 */
+        .victory-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255, 215, 0, 0.9), rgba(255, 165, 0, 0.9));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2500;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .victory-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .victory-content {
+            text-align: center;
+            animation: victoryBounce 1s ease-in-out;
+        }
+
+        .victory-text {
+            font-size: 4em;
+            font-weight: bold;
+            color: #FFF;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+
+        .victory-subtext {
+            font-size: 2em;
+            color: #FFF;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        @keyframes victoryBounce {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+            50% { transform: scale(1.1) rotate(5deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        /* 전투 결과 화면 */
+        .result-screen {
+            text-align: center;
+        }
+
+        .benefit-selection {
+            margin: 30px 0;
+        }
+
+        .benefit-options {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .benefit-card {
+            background: linear-gradient(45deg, #9C27B0, #E91E63);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 200px;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        /* 애니메이션 */
+        @keyframes damage {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); color: red; }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes critical {
+            0% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.2) rotate(-5deg); }
+            75% { transform: scale(1.2) rotate(5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .damage-animation {
+            animation: damage 0.5s;
+        }
+
+        .critical-animation {
+            animation: critical 0.8s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 타이틀 화면 -->
+        <div class="screen active title-screen" id="title-screen">
+            <h1>🎯 연산RPG</h1>
+            <p>계산으로 몬스터를 물리치세요!</p>
+            <button class="btn btn-primary" onclick="showStageSelect()">게임 시작</button>
+        </div>
+
+        <!-- 스테이지 선택 화면 -->
+        <div class="screen" id="stage-select">
+            <h2 style="text-align: center; margin-bottom: 20px; color: #333;">스테이지 선택</h2>
+            <div class="stage-grid" id="stage-grid">
+                <!-- 스테이지 카드들이 여기에 생성됩니다 -->
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn btn-secondary" onclick="showTitle()">메인으로</button>
+            </div>
+        </div>
+
+        <!-- 전투 준비 화면 -->
+        <div class="screen" id="battle-prep">
+            <div class="battle-prep">
+                <div class="battle-prep-content">
+                    <div class="player-info">
+                        <h2>플레이어 정보</h2>
+                        <div class="monster" style="background: linear-gradient(45deg, #2196F3, #21CBF3);">🧙‍♂️</div>
+                        <h3>용사</h3>
+                        <p>체력: <span id="player-hp-display">100</span>/<span id="player-maxhp-display">100</span></p>
+                        <div class="prep-health-bar">
+                            <div class="prep-health-fill" id="prep-player-health-bar"></div>
+                        </div>
+                        <p>공격력: <span id="player-attack-display">20</span></p>
+                        <p>크리티컬: <span id="player-critical-display">30</span></p>
+                    </div>
+                    <div class="vs">VS</div>
+                    <div class="monster-info">
+                        <h2>몬스터 정보</h2>
+                        <div class="monster" id="monster-display">🟢</div>
+                        <h3 id="monster-name">더하기 슬라임</h3>
+                        <p>체력: <span id="monster-hp-display">100</span></p>
+                        <p>공격력: <span id="monster-attack-display">35</span></p>
+                        <div style="margin-top: 20px;">
+                            <h4>주요 문제 패턴</h4>
+                            <p id="problem-pattern">한자리수 덧셈</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn btn-primary" onclick="startBattle()">전투 시작!</button>
+                    <button class="btn btn-secondary" onclick="showStageSelect()">돌아가기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 전투 화면 -->
+        <div class="screen" id="battle-screen">
+            <!-- 상단 정보 영역 -->
+            <div class="battle-top">
+                <!-- 좌측 플레이어 정보 -->
+                <div class="player-stats">
+                    <h3>🧙‍♂️ 용사</h3>
+                    <div class="stats-row">
+                        <span>⚔️ <span id="player-attack-stat">20</span></span>
+                        <span>🛡️ <span id="player-defense-stat">0</span></span>
+                    </div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="player-health-bar">
+                            <div class="health-text" id="player-health-text">100/100</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 중앙 게임 정보 -->
+                <div class="game-info">
+                    <div class="stage-info">스테이지 <span id="stage-number">1</span></div>
+                    <div class="turn-info">턴: <span id="turn-display">플레이어</span></div>
+                    <div class="timer-display" id="timer">30</div>
+                </div>
+
+                <!-- 우측 몬스터 정보 -->
+                <div class="monster-stats">
+                    <h3 id="monster-name-battle">👹 슬라임</h3>
+                    <div class="stats-row">
+                        <span>⚔️ <span id="monster-attack-stat">35</span></span>
+                        <span>🛡️ <span id="monster-defense-stat">0</span></span>
+                    </div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="monster-health-bar">
+                            <div class="health-text" id="monster-health-text">100/100</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 중앙 캐릭터 영역 -->
+            <div class="character-area">
+                <div class="player-character">
+                    <div class="character-sprite player-sprite">🧙‍♂️</div>
+                    <div class="character-name">용사</div>
+                </div>
+                <div class="vs-text">VS</div>
+                <div class="monster-character">
+                    <div class="character-sprite monster-sprite" id="monster-sprite">👹</div>
+                    <div class="character-name" id="monster-character-name">슬라임</div>
+                </div>
+            </div>
+
+            <!-- 문제 영역 -->
+            <div class="problem-area">
+                <div class="problem-text" id="problem">문제를 생성 중...</div>
+                <!-- 콤보 표시 -->
+                <div class="combo-display" id="combo-display" style="display: none;">2 COMBO!</div>
+            </div>
+
+            <!-- 답 입력 영역 -->
+            <div class="input-area">
+                <input type="number" 
+                       class="answer-input" 
+                       id="answer-input" 
+                       placeholder="답 입력"
+                       autocomplete="off"
+                       inputmode="numeric">
+                <button class="submit-btn" 
+                        id="submit-btn" 
+                        type="button">확인</button>
+            </div>
+
+            <!-- 턴 전환 알림 -->
+            <div class="turn-change-overlay" id="turn-change-overlay">
+                <div class="turn-change-text" id="turn-change-text">몬스터 턴!</div>
+            </div>
+
+            <!-- 승리 연출 오버레이 -->
+            <div class="victory-overlay" id="victory-overlay">
+                <div class="victory-content">
+                    <div class="victory-text">몬스터 처치!</div>
+                    <div class="victory-subtext">Victory!</div>
+                </div>
+            </div>
+
+            <!-- 피드백 오버레이 -->
+            <div class="feedback-overlay" id="feedback"></div>
+            
+            <!-- 데미지 플래시 -->
+            <div class="damage-flash" id="damage-flash"></div>
+        </div>
+
+        <!-- 전투 결과 화면 -->
+        <div class="screen" id="result-screen">
+            <div class="result-content">
+                <h2 id="result-title">승리!</h2>
+                <div style="margin: 30px 0;">
+                    <p>맞춘 문제 수: <span id="final-correct">0</span>/5</p>
+                    <p>획득 코인: <span id="earned-coins">50</span></p>
+                </div>
+
+                <div class="benefit-selection" id="benefit-selection">
+                    <h3>보상 선택</h3>
+                    <div class="benefit-options" id="benefit-options">
+                        <!-- 베네핏 옵션들이 여기에 생성됩니다 -->
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn btn-primary" onclick="nextStage()" id="next-stage-btn" style="display: none;">다음 스테이지</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let currentStage = 1;
+        let maxUnlockedStage = 1;
+        let gameState = 'title';
+        
+        // 플레이어 능력치
+        let player = {
+            hp: 100,
+            maxHp: 100,
+            attack: 20,
+            critical: 30,
+            timeLimit: 30,
+            defense: 0,
+            shield: 0
+        };
+
+        // 스테이지 정보
+        const stageData = [
+            { stage: 1, name: "더하기 슬라임", monster: "🟢", hp: 100, attack: 35, pattern: "한자리수 덧셈", color: "#4CAF50" },
+            { stage: 2, name: "동굴 박쥐", monster: "🦇", hp: 120, attack: 40, pattern: "한자리수 사칙연산", color: "#9C27B0" },
+            { stage: 3, name: "독버섯", monster: "🍄", hp: 140, attack: 45, pattern: "받아올림이 있는 덧셈", color: "#FF5722" },
+            { stage: 4, name: "늑대", monster: "🐺", hp: 180, attack: 60, pattern: "두자리수 덧셈, 뺄셈", color: "#607D8B" },
+            { stage: 5, name: "골렘", monster: "🗿", hp: 220, attack: 70, pattern: "구구단과 간단한 나눗셈", color: "#795548" },
+            { stage: 6, name: "마법사", monster: "🧙", hp: 260, attack: 80, pattern: "세자리수 덧셈, 뺄셈", color: "#3F51B5" },
+            { stage: 7, name: "드래곤", monster: "🐲", hp: 320, attack: 95, pattern: "두자리수 곱셈", color: "#F44336" },
+            { stage: 8, name: "악마", monster: "👺", hp: 380, attack: 110, pattern: "복잡한 나눗셈", color: "#E91E63" },
+            { stage: 9, name: "거대 거미", monster: "🕷️", hp: 450, attack: 125, pattern: "세자리수 사칙연산", color: "#424242" },
+            { stage: 10, name: "마왕", monster: "👑", hp: 550, attack: 150, pattern: "최고 난이도 혼합 문제", color: "#000000" }
+        ];
+
+        // 베네핏 옵션들
+        const benefits = [
+            { name: "공격력 증가", effect: () => player.attack += 5, desc: "공격력 +5" },
+            { name: "체력 증가", effect: () => { player.maxHp += 20; player.hp += 20; }, desc: "최대 체력 +20" },
+            { name: "제한시간 증가", effect: () => player.timeLimit += 5, desc: "제한시간 +5초" },
+            { name: "크리티컬 증가", effect: () => player.critical += 8, desc: "크리티컬 공격력 +8" },
+            { name: "방어력 증가", effect: () => player.defense += 5, desc: "방어력 +5" },
+            { name: "체력 회복", effect: () => player.hp = Math.min(player.maxHp, player.hp + Math.floor(player.maxHp * 0.5)), desc: "체력 50% 회복" },
+            { name: "보호막", effect: () => player.shield += 1, desc: "다음 공격 1회 무효화" },
+            { name: "코인 보너스", effect: () => {}, desc: "추가 코인 +30" }
+        ];
+
+        // 전투 관련 변수
+        let currentMonster = {};
+        let battleTimer = 30;
+        let timerInterval;
+        let correctAnswers = 0;
+        let currentProblem = {};
+        let playerTurn = true;
+        let lastProblem = null; // 마지막 문제 저장
+        let comboCount = 0; // 연속 정답 콤보
+
+        // 화면 전환 함수들
+        function showScreen(screenId) {
+            console.log('Switching to screen:', screenId);
+            
+            // 모든 스크린 숨기기
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+                screen.style.display = 'none';
+            });
+            
+            // 타겟 스크린 보이기
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                targetScreen.style.display = 'block';
+                console.log('Screen switched successfully to:', screenId);
+            } else {
+                console.error('Screen not found:', screenId);
+            }
+        }
+
+        function showTitle() {
+            gameState = 'title';
+            showScreen('title-screen');
+        }
+
+        function showStageSelect() {
+            console.log('showStageSelect called');
+            gameState = 'stage-select';
+            updateStageGrid();
+            showScreen('stage-select');
+        }
+
+        function updateStageGrid() {
+            console.log('updateStageGrid called');
+            const grid = document.getElementById('stage-grid');
+            if (!grid) {
+                console.error('Stage grid element not found');
+                return;
+            }
+            grid.innerHTML = '';
+            
+            stageData.forEach((stage, index) => {
+                const card = document.createElement('div');
+                card.className = `stage-card ${index + 1 > maxUnlockedStage ? 'locked' : ''}`;
+                card.innerHTML = `
+                    <h3>스테이지 ${stage.stage}</h3>
+                    <div style="font-size: 2em; margin: 10px 0;">${stage.monster}</div>
+                    <p><strong>${stage.name}</strong></p>
+                    <p>${stage.pattern}</p>
+                `;
+                
+                if (index + 1 <= maxUnlockedStage) {
+                    card.onclick = () => selectStage(index + 1);
+                }
+                
+                grid.appendChild(card);
+            });
+            console.log('Stage grid updated with', stageData.length, 'stages');
+        }
+
+        function selectStage(stageNum) {
+            currentStage = stageNum;
+            const stage = stageData[stageNum - 1];
+            currentMonster = { ...stage };
+            
+            // 전투 준비 화면 업데이트
+            document.getElementById('monster-display').textContent = stage.monster;
+            document.getElementById('monster-display').style.background = `linear-gradient(45deg, ${stage.color}, ${stage.color}99)`;
+            document.getElementById('monster-name').textContent = stage.name;
+            document.getElementById('monster-hp-display').textContent = stage.hp;
+            document.getElementById('monster-attack-display').textContent = stage.attack;
+            document.getElementById('problem-pattern').textContent = stage.pattern;
+            
+            document.getElementById('player-hp-display').textContent = player.hp;
+            document.getElementById('player-maxhp-display').textContent = player.maxHp;
+            document.getElementById('player-attack-display').textContent = player.attack;
+            document.getElementById('player-critical-display').textContent = player.critical;
+            
+            // 준비화면 체력바 업데이트
+            const prepHealthBar = document.getElementById('prep-player-health-bar');
+            if (prepHealthBar) {
+                const healthPercent = (player.hp / player.maxHp) * 100;
+                prepHealthBar.style.width = healthPercent + '%';
+            }
+            
+            showScreen('battle-prep');
+        }
+
+        function startBattle() {
+            console.log('Starting battle...');
+            gameState = 'battle';
+            // 전투 상태 초기화
+            correctAnswers = 0;
+            comboCount = 0;
+            playerTurn = true;
+            battleTimer = player.timeLimit;
+            lastProblem = null;
+            
+            // UI 업데이트
+            updateBattleUI();
+            
+            console.log('Switching to battle screen...');
+            showScreen('battle-screen');
+            
+            // 화면 전환 후 바로 플레이어 턴 시작 (연출 포함)
+            setTimeout(() => {
+                showPlayerTurnOverlay();
+                setTimeout(() => {
+                    hidePlayerTurnOverlay();
+                    console.log('Generating first problem...');
+                    generateProblem();
+                    startTimer();
+                }, 1500);
+            }, 100);
+        }
+
+        function updateBattleUI() {
+            // 스테이지 정보 업데이트
+            const stageNumber = document.getElementById('stage-number');
+            if (stageNumber) stageNumber.textContent = currentStage;
+            
+            // 플레이어 정보 업데이트
+            const playerAttackStat = document.getElementById('player-attack-stat');
+            const playerDefenseStat = document.getElementById('player-defense-stat');
+            if (playerAttackStat) playerAttackStat.textContent = player.attack;
+            if (playerDefenseStat) playerDefenseStat.textContent = player.defense;
+            
+            // 몬스터 정보 업데이트
+            const monsterNameBattle = document.getElementById('monster-name-battle');
+            const monsterAttackStat = document.getElementById('monster-attack-stat');
+            const monsterDefenseStat = document.getElementById('monster-defense-stat');
+            const monsterSprite = document.getElementById('monster-sprite');
+            const monsterCharacterName = document.getElementById('monster-character-name');
+            
+            if (monsterNameBattle) monsterNameBattle.textContent = `${currentMonster.monster} ${currentMonster.name}`;
+            if (monsterAttackStat) monsterAttackStat.textContent = currentMonster.attack;
+            if (monsterDefenseStat) monsterDefenseStat.textContent = currentMonster.defense || 0;
+            if (monsterSprite) {
+                monsterSprite.textContent = currentMonster.monster;
+                monsterSprite.style.background = `linear-gradient(45deg, ${currentMonster.color}, ${currentMonster.color}99)`;
+            }
+            if (monsterCharacterName) monsterCharacterName.textContent = currentMonster.name;
+            
+            // 턴 정보 업데이트
+            const turnDisplay = document.getElementById('turn-display');
+            if (turnDisplay) turnDisplay.textContent = '플레이어';
+            
+            updateHealthBars();
+        }
+
+        function generateProblem() {
+            const stage = currentStage;
+            let problem;
+            
+            console.log('Generating problem for stage:', stage);
+            
+            try {
+                if (stage <= 2) {
+                    problem = generateSimpleAddSub();
+                } else if (stage <= 3) {
+                    problem = generateCarryAddition();
+                } else if (stage <= 4) {
+                    problem = generateTwoDigitAddSub();
+                } else if (stage <= 5) {
+                    problem = generateMultiplyDivide();
+                } else if (stage <= 6) {
+                    problem = generateThreeDigitAddSub();
+                } else if (stage <= 7) {
+                    problem = generateTwoDigitMultiply();
+                } else if (stage <= 8) {
+                    problem = generateComplexDivide();
+                } else {
+                    problem = generateMixedProblems();
+                }
+                
+                console.log('Generated problem:', problem);
+                
+                if (!problem || !problem.question || problem.answer === undefined) {
+                    throw new Error('Invalid problem generated');
+                }
+                
+                // 같은 문제가 연달아 나오지 않도록 체크
+                if (lastProblem && problem.question === lastProblem.question && problem.answer === lastProblem.answer) {
+                    console.log('Same problem detected, regenerating...');
+                    // 다시 생성 (최대 3번 시도)
+                    for (let i = 0; i < 3; i++) {
+                        if (stage <= 2) {
+                            problem = generateSimpleAddSub();
+                        } else if (stage <= 3) {
+                            problem = generateCarryAddition();
+                        } else if (stage <= 4) {
+                            problem = generateTwoDigitAddSub();
+                        } else if (stage <= 5) {
+                            problem = generateMultiplyDivide();
+                        } else if (stage <= 6) {
+                            problem = generateThreeDigitAddSub();
+                        } else if (stage <= 7) {
+                            problem = generateTwoDigitMultiply();
+                        } else if (stage <= 8) {
+                            problem = generateComplexDivide();
+                        } else {
+                            problem = generateMixedProblems();
+                        }
+                        
+                        if (!lastProblem || problem.question !== lastProblem.question || problem.answer !== lastProblem.answer) {
+                            break;
+                        }
+                    }
+                }
+                
+                lastProblem = { ...problem };
+                currentProblem = problem;
+                const problemElement = document.getElementById('problem');
+                if (problemElement) {
+                    problemElement.textContent = `${problem.question} = ?`;
+                    console.log('Problem displayed:', problem.question);
+                } else {
+                    console.error('Problem element not found');
+                }
+                
+                const inputElement = document.getElementById('answer-input');
+                if (inputElement) {
+                    inputElement.value = '';
+                    setTimeout(() => {
+                        inputElement.focus();
+                        inputElement.click();
+                    }, 200);
+                } else {
+                    console.error('Answer input element not found');
+                }
+                
+            } catch (error) {
+                console.error('Error generating problem:', error);
+                // 기본 문제로 대체
+                problem = { question: '5 + 3', answer: 8 };
+                currentProblem = problem;
+                const problemElement = document.getElementById('problem');
+                if (problemElement) {
+                    problemElement.textContent = `${problem.question} = ?`;
+                } else {
+                    console.error('Problem element not found in catch block');
+                }
+                
+                const inputElement = document.getElementById('answer-input');
+                if (inputElement) {
+                    inputElement.value = '';
+                    setTimeout(() => {
+                        inputElement.focus();
+                        inputElement.click();
+                    }, 200);
+                }
+            }
+        }
+
+        // 문제 생성 함수들
+        function generateSimpleAddSub() {
+            try {
+                if (currentStage === 1) {
+                    // 1스테이지는 덧셈만
+                    const a = Math.floor(Math.random() * 9) + 1;
+                    const b = Math.floor(Math.random() * 9) + 1;
+                    return { question: `${a} + ${b}`, answer: a + b };
+                } else {
+                    // 2스테이지부터는 덧셈, 뺄셈 모두
+                    const a = Math.floor(Math.random() * 9) + 1;
+                    const b = Math.floor(Math.random() * 9) + 1;
+                    const operations = ['+', '-'];
+                    const operation = operations[Math.floor(Math.random() * 2)];
+                    
+                    if (operation === '+') {
+                        return { question: `${a} + ${b}`, answer: a + b };
+                    } else {
+                        const larger = Math.max(a, b);
+                        const smaller = Math.min(a, b);
+                        return { question: `${larger} - ${smaller}`, answer: larger - smaller };
+                    }
+                }
+            } catch (error) {
+                console.error('Error in generateSimpleAddSub:', error);
+                return { question: '5 + 3', answer: 8 };
+            }
+        }
+
+        function generateCarryAddition() {
+            const a = Math.floor(Math.random() * 9) + 1;
+            const b = Math.floor(Math.random() * (10 - a)) + (10 - a);
+            return { question: `${a} + ${b}`, answer: a + b };
+        }
+
+        function generateTwoDigitAddSub() {
+            const a = Math.floor(Math.random() * 90) + 10;
+            const b = Math.floor(Math.random() * 90) + 10;
+            const operation = Math.random() < 0.5 ? '+' : '-';
+            
+            if (operation === '+') {
+                return { question: `${a} + ${b}`, answer: a + b };
+            } else {
+                const larger = Math.max(a, b);
+                const smaller = Math.min(a, b);
+                return { question: `${larger} - ${smaller}`, answer: larger - smaller };
+            }
+        }
+
+        function generateMultiplyDivide() {
+            if (Math.random() < 0.6) {
+                const a = Math.floor(Math.random() * 9) + 2;
+                const b = Math.floor(Math.random() * 9) + 2;
+                return { question: `${a} × ${b}`, answer: a * b };
+            } else {
+                const b = Math.floor(Math.random() * 9) + 2;
+                const answer = Math.floor(Math.random() * 9) + 2;
+                const a = b * answer;
+                return { question: `${a} ÷ ${b}`, answer: answer };
+            }
+        }
+
+        function generateThreeDigitAddSub() {
+            const a = Math.floor(Math.random() * 900) + 100;
+            const b = Math.floor(Math.random() * 900) + 100;
+            const operation = Math.random() < 0.5 ? '+' : '-';
+            
+            if (operation === '+') {
+                return { question: `${a} + ${b}`, answer: a + b };
+            } else {
+                const larger = Math.max(a, b);
+                const smaller = Math.min(a, b);
+                return { question: `${larger} - ${smaller}`, answer: larger - smaller };
+            }
+        }
+
+        function generateTwoDigitMultiply() {
+            const a = Math.floor(Math.random() * 90) + 10;
+            const b = Math.floor(Math.random() * 9) + 2;
+            return { question: `${a} × ${b}`, answer: a * b };
+        }
+
+        function generateComplexDivide() {
+            const b = Math.floor(Math.random() * 20) + 5;
+            const answer = Math.floor(Math.random() * 20) + 5;
+            const a = b * answer;
+            return { question: `${a} ÷ ${b}`, answer: answer };
+        }
+
+        function generateMixedProblems() {
+            const operations = [generateThreeDigitAddSub, generateTwoDigitMultiply, generateComplexDivide];
+            const selectedOp = operations[Math.floor(Math.random() * operations.length)];
+            return selectedOp();
+        }
+
+        function startTimer() {
+            document.getElementById('timer').textContent = battleTimer;
+            
+            timerInterval = setInterval(() => {
+                battleTimer--;
+                document.getElementById('timer').textContent = battleTimer;
+                
+                if (battleTimer <= 0) {
+                    clearInterval(timerInterval);
+                    endPlayerTurn();
+                }
+            }, 1000);
+        }
+
+        function submitAnswer() {
+            console.log('Submit answer clicked');
+            const userAnswer = parseInt(document.getElementById('answer-input').value);
+            
+            if (isNaN(userAnswer)) {
+                console.log('Invalid input, focusing on input field');
+                document.getElementById('answer-input').focus();
+                return;
+            }
+            
+            console.log('User answer:', userAnswer, 'Correct answer:', currentProblem.answer);
+            
+            if (userAnswer === currentProblem.answer) {
+                correctAnswers++;
+                comboCount++;
+                
+                // 콤보 표시 업데이트
+                updateComboDisplay();
+                
+                // 정답과 데미지를 함께 표시
+                if (correctAnswers === 5) {
+                    performCriticalAttack();
+                    showFeedback(`정답! 크리티컬 ${player.critical} 데미지!`, 'critical');
+                } else {
+                    performNormalAttack();
+                    showFeedback(`정답! ${player.attack} 데미지!`, 'correct');
+                }
+                
+                if (currentMonster.hp <= 0) {
+                    clearInterval(timerInterval);
+                    showVictorySequence();
+                    return;
+                } else if (correctAnswers < 5) {
+                    setTimeout(() => {
+                        generateProblem();
+                    }, 1500);
+                } else {
+                    clearInterval(timerInterval);
+                    setTimeout(() => {
+                        endPlayerTurn();
+                    }, 1500);
+                }
+            } else {
+                // 오답 - 콤보 리셋 (이미 endPlayerTurn에서 처리됨)
+                showFeedback('틀렸습니다!', 'incorrect');
+                clearInterval(timerInterval);
+                battleTimer = 0;
+                document.getElementById('timer').textContent = '0';
+                setTimeout(() => {
+                    endPlayerTurn();
+                }, 1500);
+            }
+        }
+
+        function performNormalAttack() {
+            const damage = player.attack;
+            currentMonster.hp = Math.max(0, currentMonster.hp - damage);
+            updateHealthBars();
+        }
+
+        function performCriticalAttack() {
+            const damage = player.critical;
+            currentMonster.hp = Math.max(0, currentMonster.hp - damage);
+            updateHealthBars();
+        }
+
+        function updateComboDisplay() {
+            const comboDisplay = document.getElementById('combo-display');
+            if (comboDisplay) {
+                if (comboCount >= 2) {
+                    comboDisplay.textContent = `${comboCount} COMBO!`;
+                    comboDisplay.style.display = 'block';
+                    comboDisplay.classList.add('show');
+                } else {
+                    comboDisplay.style.display = 'none';
+                    comboDisplay.classList.remove('show');
+                }
+            }
+        }
+
+        function showDamage(damage, isCritical) {
+            const monsterElement = document.getElementById('monster-name-battle');
+            if (isCritical) {
+                monsterElement.classList.add('critical-animation');
+                showFeedback(`크리티컬! ${damage} 데미지!`, 'critical');
+                setTimeout(() => monsterElement.classList.remove('critical-animation'), 800);
+            } else {
+                monsterElement.classList.add('damage-animation');
+                showFeedback(`${damage} 데미지!`, 'correct');
+                setTimeout(() => monsterElement.classList.remove('damage-animation'), 500);
+            }
+        }
+
+        function showFeedback(text, type) {
+            const feedback = document.getElementById('feedback');
+            feedback.setAttribute('data-text', text);
+            feedback.className = `feedback-overlay ${type} show`;
+            
+            // 체력바를 피드백 위에 보이도록 z-index 조정
+            const healthBars = document.querySelectorAll('.health-bar, .health-fill, .health-text');
+            healthBars.forEach(bar => {
+                bar.style.zIndex = '2500';
+                bar.style.position = 'relative';
+            });
+            
+            setTimeout(() => {
+                feedback.classList.remove('show');
+                // z-index 원복
+                healthBars.forEach(bar => {
+                    bar.style.zIndex = '';
+                    bar.style.position = '';
+                });
+            }, 1500);
+        }
+
+        function updateHealthBars() {
+            // 몬스터 체력바
+            const monsterStage = stageData[currentStage - 1];
+            const monsterHpPercent = (currentMonster.hp / monsterStage.hp) * 100;
+            document.getElementById('monster-health-bar').style.width = monsterHpPercent + '%';
+            document.getElementById('monster-health-text').textContent = `${currentMonster.hp}/${monsterStage.hp}`;
+            
+            // 플레이어 체력바
+            const playerHpPercent = (player.hp / player.maxHp) * 100;
+            document.getElementById('player-health-bar').style.width = playerHpPercent + '%';
+            document.getElementById('player-health-text').textContent = `${player.hp}/${player.maxHp}`;
+        }
+
+        function endPlayerTurn() {
+            playerTurn = false;
+            // 시간 초과 또는 오답으로 턴이 끝나면 콤보 리셋
+            comboCount = 0;
+            updateComboDisplay();
+            
+            const turnDisplay = document.getElementById('turn-display');
+            if (turnDisplay) turnDisplay.textContent = '몬스터';
+            
+            showTurnChangeOverlay();
+            
+            setTimeout(() => {
+                hideTurnChangeOverlay();
+                performMonsterAttack();
+            }, 2000);
+        }
+
+        function showTurnChangeOverlay() {
+            const overlay = document.getElementById('turn-change-overlay');
+            const text = document.getElementById('turn-change-text');
+            if (overlay && text) {
+                text.textContent = '몬스터 턴!';
+                text.style.color = '#FF5722';
+                text.style.borderColor = '#FF5722';
+                overlay.classList.add('show');
+            }
+        }
+
+        function hideTurnChangeOverlay() {
+            const overlay = document.getElementById('turn-change-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+        }
+
+        function showVictorySequence() {
+            // 스테이지 클리어 시 콤보 리셋
+            comboCount = 0;
+            updateComboDisplay();
+            
+            // 몬스터 처치 연출
+            const monsterSprite = document.getElementById('monster-sprite');
+            if (monsterSprite) {
+                monsterSprite.style.animation = 'shake 0.5s ease-in-out';
+                setTimeout(() => {
+                    monsterSprite.style.opacity = '0.3';
+                    monsterSprite.style.transform = 'scale(0.8)';
+                }, 500);
+            }
+            
+            // 승리 오버레이 표시
+            setTimeout(() => {
+                const victoryOverlay = document.getElementById('victory-overlay');
+                if (victoryOverlay) {
+                    victoryOverlay.classList.add('show');
+                }
+            }, 1000);
+            
+            // 결과 화면으로 이동
+            setTimeout(() => {
+                const victoryOverlay = document.getElementById('victory-overlay');
+                if (victoryOverlay) {
+                    victoryOverlay.classList.remove('show');
+                }
+                showVictory();
+            }, 3000);
+        }
+
+        function performMonsterAttack() {
+            if (player.shield > 0) {
+                player.shield--;
+                showFeedback('공격 차단!', 'correct');
+            } else {
+                const damage = Math.max(1, currentMonster.attack - player.defense);
+                player.hp = Math.max(0, player.hp - damage);
+                
+                // RPG 스타일 데미지 연출
+                showDamageEffect();
+                showFeedback(`${damage} 데미지를 받았습니다!`, 'incorrect');
+            }
+            
+            updateHealthBars();
+            
+            if (player.hp <= 0) {
+                setTimeout(() => showGameOver(), 1000);
+            } else {
+                setTimeout(() => startPlayerTurn(), 1500);
+            }
+        }
+
+        function showDamageEffect() {
+            // 화면 흔들기
+            const container = document.querySelector('.container');
+            if (container) {
+                container.classList.add('screen-shake');
+                setTimeout(() => {
+                    container.classList.remove('screen-shake');
+                }, 500);
+            }
+            
+            // 빨간 플래시
+            const damageFlash = document.getElementById('damage-flash');
+            if (damageFlash) {
+                damageFlash.classList.add('show');
+                setTimeout(() => {
+                    damageFlash.classList.remove('show');
+                }, 600);
+            }
+        }
+
+        function startPlayerTurn() {
+            playerTurn = true;
+            correctAnswers = 0;
+            battleTimer = player.timeLimit;
+            
+            const turnDisplay = document.getElementById('turn-display');
+            if (turnDisplay) turnDisplay.textContent = '플레이어';
+            
+            // 플레이어 턴 시작 알림 표시 (첫 턴 제외)
+            if (comboCount > 0 || currentMonster.hp < stageData[currentStage - 1].hp) {
+                showPlayerTurnOverlay();
+                setTimeout(() => {
+                    hidePlayerTurnOverlay();
+                    generateProblem();
+                    startTimer();
+                }, 1500);
+            } else {
+                // 첫 턴이면 바로 시작
+                generateProblem();
+                startTimer();
+            }
+        }
+
+        function showPlayerTurnOverlay() {
+            const overlay = document.getElementById('turn-change-overlay');
+            const text = document.getElementById('turn-change-text');
+            if (overlay && text) {
+                text.textContent = '플레이어 턴!';
+                text.style.color = '#2196F3';
+                text.style.borderColor = '#2196F3';
+                overlay.classList.add('show');
+            }
+        }
+
+        function hidePlayerTurnOverlay() {
+            const overlay = document.getElementById('turn-change-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+        }
+
+        function showVictory() {
+            gameState = 'result';
+            const coinsEarned = 50 + (currentStage * 10);
+            
+            const resultTitle = document.getElementById('result-title');
+            const finalCorrect = document.getElementById('final-correct');
+            const earnedCoins = document.getElementById('earned-coins');
+            const benefitSelection = document.getElementById('benefit-selection');
+            const nextStageBtn = document.getElementById('next-stage-btn');
+            
+            if (resultTitle) resultTitle.textContent = '승리!';
+            if (finalCorrect) finalCorrect.textContent = correctAnswers;
+            if (earnedCoins) earnedCoins.textContent = coinsEarned;
+            
+            // 베네핏 선택 항상 표시
+            if (benefitSelection) benefitSelection.style.display = 'block';
+            
+            // 다음 스테이지 버튼은 베네핏 선택 후에만 표시
+            if (nextStageBtn) {
+                nextStageBtn.style.display = 'none';
+                if (currentStage >= 10) {
+                    nextStageBtn.textContent = '게임 클리어!';
+                } else {
+                    nextStageBtn.textContent = '다음 스테이지';
+                }
+            }
+            
+            if (currentStage === maxUnlockedStage && currentStage < 10) {
+                maxUnlockedStage++;
+            }
+            
+            generateBenefitOptions();
+            showScreen('result-screen');
+        }
+
+        function showGameOver() {
+            gameState = 'result';
+            maxUnlockedStage = 1;
+            player = {
+                hp: 100,
+                maxHp: 100,
+                attack: 20,
+                critical: 30,
+                timeLimit: 30,
+                defense: 0,
+                shield: 0
+            };
+            
+            const resultTitle = document.getElementById('result-title');
+            const finalCorrect = document.getElementById('final-correct');
+            const earnedCoins = document.getElementById('earned-coins');
+            const benefitSelection = document.getElementById('benefit-selection');
+            const nextStageBtn = document.getElementById('next-stage-btn');
+            
+            if (resultTitle) resultTitle.textContent = '패배...';
+            if (finalCorrect) finalCorrect.textContent = correctAnswers;
+            if (earnedCoins) earnedCoins.textContent = '0';
+            if (benefitSelection) benefitSelection.style.display = 'none';
+            if (nextStageBtn) nextStageBtn.style.display = 'none';
+            
+            showScreen('result-screen');
+        }
+
+        function generateBenefitOptions() {
+            const benefitContainer = document.getElementById('benefit-options');
+            if (!benefitContainer) return;
+            
+            benefitContainer.innerHTML = '';
+            
+            const shuffled = [...benefits].sort(() => 0.5 - Math.random());
+            const selectedBenefits = shuffled.slice(0, 3);
+            
+            selectedBenefits.forEach((benefit, index) => {
+                const card = document.createElement('div');
+                card.className = 'benefit-card';
+                card.innerHTML = `
+                    <h4>${benefit.name}</h4>
+                    <p>${benefit.desc}</p>
+                `;
+                card.onclick = () => selectBenefit(benefit);
+                benefitContainer.appendChild(card);
+            });
+        }
+
+        function selectBenefit(benefit) {
+            benefit.effect();
+            
+            const benefitSelection = document.getElementById('benefit-selection');
+            if (benefitSelection) {
+                benefitSelection.innerHTML = `
+                    <h3 style="color: #28A745; margin-bottom: 15px;">✓ 선택 완료: ${benefit.name}</h3>
+                    <p style="font-size: 1.1em; color: #495057;">${benefit.desc}</p>
+                `;
+            }
+            
+            // 베네핏 선택 후 다음 스테이지 버튼 표시
+            const nextStageBtn = document.getElementById('next-stage-btn');
+            if (nextStageBtn) {
+                nextStageBtn.style.display = 'inline-block';
+            }
+        }
+
+        function nextStage() {
+            // 다음 스테이지 시작 시 콤보 리셋
+            comboCount = 0;
+            
+            if (currentStage < 10) {
+                // 다음 스테이지로 자동 이동
+                currentStage++;
+                const stage = stageData[currentStage - 1];
+                currentMonster = { ...stage };
+                
+                // 전투 준비 화면 업데이트
+                document.getElementById('monster-display').textContent = stage.monster;
+                document.getElementById('monster-display').style.background = `linear-gradient(45deg, ${stage.color}, ${stage.color}99)`;
+                document.getElementById('monster-name').textContent = stage.name;
+                document.getElementById('monster-hp-display').textContent = stage.hp;
+                document.getElementById('monster-attack-display').textContent = stage.attack;
+                document.getElementById('problem-pattern').textContent = stage.pattern;
+                
+                document.getElementById('player-hp-display').textContent = player.hp;
+                document.getElementById('player-maxhp-display').textContent = player.maxHp;
+                document.getElementById('player-attack-display').textContent = player.attack;
+                document.getElementById('player-critical-display').textContent = player.critical;
+                
+                // 준비화면 체력바 업데이트
+                const prepHealthBar = document.getElementById('prep-player-health-bar');
+                if (prepHealthBar) {
+                    const healthPercent = (player.hp / player.maxHp) * 100;
+                    prepHealthBar.style.width = healthPercent + '%';
+                }
+                
+                showScreen('battle-prep');
+            } else {
+                // 게임 클리어
+                alert('🎉 축하합니다! 모든 스테이지를 클리어했습니다! 🎉');
+                showStageSelect();
+            }
+        }
+
+        // 이벤트 리스너들
+        document.addEventListener('DOMContentLoaded', function() {
+            const submitBtn = document.getElementById('submit-btn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', submitAnswer);
+                submitBtn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    submitAnswer();
+                });
+            }
+
+            const answerInput = document.getElementById('answer-input');
+            if (answerInput) {
+                answerInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitAnswer();
+                    }
+                });
+                
+                answerInput.addEventListener('focus', function() {
+                    console.log('Input focused');
+                });
+                
+                answerInput.addEventListener('click', function() {
+                    this.focus();
+                });
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState === 'battle' && e.key === 'Enter') {
+                e.preventDefault();
+                submitAnswer();
+            }
+        });
+
+        window.onload = () => {
+            updateStageGrid();
+        };
+    </script>
+</body>
+</html>
