@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>보물섬 탐험 6×6</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #3ba7ff 0, #00529b 40%, #001a33 100%);
+      color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 16px;
+    }
+
+    .game-container {
+      width: 100%;
+      max-width: 380px;
+      margin: 0 auto;
+      background: #20160d;
+      border-radius: 18px;
+      padding: 16px 16px 20px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.7);
+      border: 2px solid #d1a66a;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-container::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 10% 0, rgba(255,255,255,0.08), transparent 55%),
+                        radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 55%);
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    h1 {
+      font-family: "Trebuchet MS", system-ui, sans-serif;
+      letter-spacing: 1px;
+      font-size: 1.3rem;
+      text-align: center;
+      margin: 0 0 8px;
+      color: #ffe9b3;
+      position: relative;
+      z-index: 1;
+    }
+
+    .info {
+      font-size: 0.85rem;
+      text-align: center;
+      margin-bottom: 12px;
+      color: #e0d1b3;
+      position: relative;
+      z-index: 1;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      gap: 8px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .status-item {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(34, 26, 16, 0.9);
+      border: 1px solid #85663a;
+      color: #f3e2c4;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    button {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1a1208;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    #resetBtn {
+      background: #ffd76b;
+    }
+
+    #revealBtn {
+      background: #ff8a80;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .grid-wrapper {
+      position: relative;
+      padding: 10px;
+      border-radius: 12px;
+      background: radial-gradient(circle at top, #f8e0a2 0, #c99b5c 45%, #8b5b2a 100%);
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.4);
+      margin-bottom: 10px;
+      z-index: 1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+    }
+
+    .tile {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: #1a1208;
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+      transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease, border 0.15s ease;
+      background: linear-gradient(145deg, #f6e0a6, #e0b96c);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.5),
+        0 2px 0 rgba(135,79,24,0.7);
+      border: 1px solid rgba(138,95,45,0.7);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tile::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.25), transparent 50%);
+      opacity: 0.8;
+      pointer-events: none;
+    }
+
+    .tile:active {
+      transform: translateY(1px);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.4),
+        0 1px 0 rgba(135,79,24,0.8);
+    }
+
+    .tile.revealed {
+      background: linear-gradient(145deg, #f0d89b, #d3b06c);
+      color: #1a1208;
+      cursor: default;
+      box-shadow:
+        inset 0 2px 3px rgba(0,0,0,0.25),
+        0 1px 0 rgba(135,79,24,0.7);
+    }
+
+    /* 보물 */
+    .tile.treasure {
+      background: radial-gradient(circle at 30% 20%, #fff8e1, #ffca28);
+      color: #4a2d00;
+      font-size: 1.3rem;
+      box-shadow:
+        0 0 12px rgba(255, 235, 59, 0.9),
+        inset 0 2px 4px rgba(0,0,0,0.35);
+      border: 2px solid #ffecb3;
+    }
+
+    /* 바위(장애물) */
+    .tile.rock {
+      background: radial-gradient(circle at 20% 15%, #7e888f, #30363b);
+      box-shadow:
+        inset 0 2px 3px rgba(255,255,255,0.2),
+        0 2px 0 rgba(0,0,0,0.6);
+      border: 1px solid #22282c;
+      color: #e0e4e7;
+      cursor: default;
+      font-size: 1.1rem;
+    }
+
+    .tile.rock::after {
+      opacity: 0.2;
+    }
+
+    /* 힌트 색상 표시 */
+    .tile.hint-near {
+      box-shadow:
+        inset 0 0 0 3px rgba(76, 175, 80, 0.9),
+        0 2px 0 rgba(135,79,24,0.7);
+    }
+
+    .tile.hint-mid {
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 235, 59, 0.9),
+        0 2px 0 rgba(135,79,24,0.7);
+    }
+
+    .message {
+      min-height: 1.5em;
+      font-size: 0.9rem;
+      text-align: center;
+      color: #f3e2c4;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 토스트 UI */
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) translateY(20px);
+      background: rgba(20, 20, 20, 0.9);
+      color: #fefefe;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      max-width: 80%;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) translateY(0);
+    }
+
+    /* 제한 횟수 팝업 모달 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9998;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      background: #2a1b0f;
+      border-radius: 16px;
+      padding: 16px 18px 14px;
+      max-width: 280px;
+      width: 90%;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.8);
+      border: 1px solid #d1a66a;
+      color: #f5e3c3;
+      text-align: center;
+      font-size: 0.9rem;
+      position: relative;
+    }
+
+    .modal-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 1rem;
+      color: #ffe1a0;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-ad {
+      background: #ffd76b;
+      min-width: 140px;
+    }
+
+    .btn-giveup {
+      background: #ff8a80;
+      min-width: 120px;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>보물섬 탐험 6×6</h1>
+    <div class="info">
+      6×6 섬 타일 중 <strong>1개</strong>에 보물이 숨겨져 있어요.<br>
+      바위(⛰️) 타일은 막혀 있어서 터치할 수 없고 보물도 숨겨져 있지 않아요.<br>
+      <strong>5번 안에</strong> 보물을 찾지 못하면 기회가 끝나요.<br>
+      광고를 보면 <strong>1번 더</strong> 탐험 기회를 얻을 수 있어요.
+    </div>
+
+    <div class="status-bar">
+      <div class="status-item">시도: <span id="attempts">0</span>/5</div>
+      <div class="status-item">찾은 보물: <span id="found">0</span>/1</div>
+      <div class="button-group">
+        <button id="revealBtn" type="button">정답 공개</button>
+        <button id="resetBtn" type="button">다시 시작</button>
+      </div>
+    </div>
+
+    <div class="grid-wrapper">
+      <div id="grid" class="grid"></div>
+    </div>
+    <div id="message" class="message">보물섬을 탐험해 보세요!</div>
+  </div>
+
+  <!-- 토스트 UI -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 제한 횟수 모달 -->
+  <div id="limitModalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-title">제한 횟수를 모두 사용했어요.</div>
+      <div class="modal-text">
+        광고를 보고 한 번 더 탐험할 수 있어요.<br>
+        아니면 포기하고 보물 위치를 확인할 수 있습니다.
+      </div>
+      <div class="modal-buttons">
+        <button id="adButton" class="btn-ad" type="button">
+          광고 보고 1회 더 기회를 얻기
+        </button>
+        <button id="giveUpButton" class="btn-giveup" type="button">
+          포기하고 보물 위치 확인
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GRID_SIZE = 6;
+    const TREASURE_COUNT = 1;
+    const ROCK_COUNT = 6;
+    const BASE_ATTEMPT_LIMIT = 5;
+
+    let treasurePositions = new Set();
+    let remainingTreasures = new Set();
+    let rockPositions = new Set();
+    let attempts = 0;
+    let foundCount = 0;
+    let gameOver = false;
+
+    let toastTimeoutId = null;
+
+    let extraAttemptUsed = false;   // 광고 이용 여부
+    let limitModalVisible = false;  // 모달 표시 여부
+
+    // 문구 배리에이션
+    const messages = {
+      near: {
+        toast: [
+          '아주 가까이에 보물이 있을 것 같다!',
+          '코앞에 보물이 숨어 있는 느낌이야!',
+          '손만 뻗으면 보물에 닿을 것 같아!',
+          '바로 근처에서 반짝이는 기운이 느껴진다!'
+        ],
+        bottom: [
+          '아주 가까이에 보물이 숨어 있는 것 같아요!',
+          '이 주변 어딘가에 보물이 꼭 있을 것 같아요!',
+          '조금만 더 잘 살펴보면 보물을 찾을 수 있을 거예요!',
+          '한두 칸 안에 보물이 있을지도 몰라요!'
+        ]
+      },
+      mid: {
+        toast: [
+          '보물이 어디엔가 있을 것 같다.',
+          '이 근처 어딘가에 보물이 숨겨져 있는 느낌이야.',
+          '멀지는 않지만 조금 더 둘러봐야 할 것 같아.',
+          '보물의 기운이 희미하게 느껴진다.'
+        ],
+        bottom: [
+          '이 근처 어딘가에 보물이 있을지도 몰라요.',
+          '조금 더 돌아다니면 보물 기운이 더 강해질 거예요.',
+          '완전 멀지는 않지만, 아직 딱 찾기엔 애매해요.',
+          '여기서부터 방향을 잘 잡아보는 게 좋겠어요.'
+        ]
+      },
+      far: {
+        toast: [
+          '이런 곳에는 보물은 없을 것 같다.',
+          '보물은 이 주변에는 아닌 것 같아.',
+          '보물 기운이 전혀 느껴지지 않는다.',
+          '여기는 그냥 평범한 땅인 것 같다.'
+        ],
+        bottom: [
+          '보물이 이 근처에는 없는 것 같아요.',
+          '여긴 아닌 것 같으니 다른 곳을 탐험해 보세요.',
+          '보물은 꽤 떨어진 곳에 숨어 있는 것 같아요.',
+          '다른 방향으로 이동해 보세요.'
+        ]
+      },
+      noneLeft: {
+        toast: [
+          '더 이상 찾을 보물이 없어 보입니다.',
+          '이미 모든 보물을 찾은 것 같아요.',
+          '이제 더 찾을 보물이 없네요.'
+        ],
+        bottom: [
+          '남은 보물이 더 이상 없어요.',
+          '이 섬의 보물은 모두 발견된 것 같아요.',
+          '이제 탐험을 마무리해도 좋겠어요.'
+        ]
+      },
+      foundTreasure: {
+        toast: [
+          '보물을 찾았습니다!',
+          '대성공! 보물을 발견했어요!',
+          '축하합니다! 보물을 손에 넣었어요!'
+        ]
+      },
+      reveal: {
+        toast: [
+          '정답을 모두 공개했습니다.',
+          '보물 위치를 모두 보여줬어요.',
+          '이제 보물은 비밀이 아니에요.'
+        ]
+      },
+      extraChance: {
+        toast: [
+          '1회 추가 기회를 얻었습니다!',
+          '광고 덕분에 한 번 더 탐험할 수 있어요!',
+          '보너스 기회 1회를 획득했습니다!'
+        ]
+      },
+      noMoreAd: {
+        toast: [
+          '광고 기회는 한 번만 사용할 수 있어요.',
+          '추가 기회는 이미 사용했어요.',
+          '더 이상 광고로 기회를 늘릴 수 없어요.'
+        ]
+      }
+    };
+
+    function pickRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function indexToCoord(idx) {
+      return {
+        row: Math.floor(idx / GRID_SIZE),
+        col: idx % GRID_SIZE
+      };
+    }
+
+    // 대각선 인접도 1칸: Chebyshev 거리
+    function calcChebyshevDistance(idxA, idxB) {
+      const { row: r1, col: c1 } = indexToCoord(idxA);
+      const { row: r2, col: c2 } = indexToCoord(idxB);
+      return Math.max(Math.abs(r1 - r2), Math.abs(c1 - c2));
+    }
+
+    function calcMinDistanceFromRemaining(idx) {
+      if (remainingTreasures.size === 0) return null;
+
+      let min = Infinity;
+      remainingTreasures.forEach(tIdx => {
+        const d = calcChebyshevDistance(idx, tIdx);
+        if (d < min) min = d;
+      });
+
+      return min;
+    }
+
+    function getCurrentAttemptLimit() {
+      return BASE_ATTEMPT_LIMIT + (extraAttemptUsed ? 1 : 0);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+
+      if (toastTimeoutId !== null) {
+        clearTimeout(toastTimeoutId);
+      }
+
+      toast.classList.add('show');
+
+      toastTimeoutId = setTimeout(() => {
+        toast.classList.remove('show');
+        toastTimeoutId = null;
+      }, 1200);
+    }
+
+    function applyHintVisual(tile, distance) {
+      tile.classList.remove('hint-near', 'hint-mid');
+
+      if (distance === null || distance >= 4) {
+        return;
+      }
+
+      if (distance === 1) {
+        tile.classList.add('hint-near');
+      } else if (distance === 2 || distance === 3) {
+        tile.classList.add('hint-mid');
+      }
+    }
+
+    function updateAllRevealedHints() {
+      const grid = document.getElementById('grid');
+      const tiles = grid.children;
+
+      for (let i = 0; i < tiles.length; i++) {
+        const tile = tiles[i];
+        const idx = parseInt(tile.dataset.index, 10);
+
+        if (
+          tile.classList.contains('revealed') &&
+          !tile.classList.contains('treasure') &&
+          !tile.classList.contains('rock')
+        ) {
+          const d = calcMinDistanceFromRemaining(idx);
+          applyHintVisual(tile, d);
+        }
+      }
+    }
+
+    function showLimitModal() {
+      if (limitModalVisible || gameOver) return;
+
+      limitModalVisible = true;
+      const backdrop = document.getElementById('limitModalBackdrop');
+      const adButton = document.getElementById('adButton');
+
+      backdrop.classList.add('show');
+
+      // 광고 버튼 상태 업데이트
+      if (extraAttemptUsed) {
+        adButton.disabled = true;
+        adButton.textContent = '광고 기회는 이미 사용했어요';
+      } else {
+        adButton.disabled = false;
+        adButton.textContent = '광고 보고 1회 더 기회를 얻기';
+      }
+    }
+
+    function hideLimitModal() {
+      limitModalVisible = false;
+      const backdrop = document.getElementById('limitModalBackdrop');
+      backdrop.classList.remove('show');
+    }
+
+    function onTileClick(event) {
+      if (gameOver) return;
+
+      const tile = event.currentTarget;
+      const idx = parseInt(tile.dataset.index, 10);
+
+      if (rockPositions.has(idx)) return;
+      if (tile.classList.contains('revealed')) return;
+
+      tile.classList.add('revealed');
+      attempts++;
+      document.getElementById('attempts').textContent = attempts + '/' + BASE_ATTEMPT_LIMIT;
+
+      const msgEl = document.getElementById('message');
+
+      if (treasurePositions.has(idx)) {
+        // 보물 발견
+        tile.classList.add('treasure');
+        tile.textContent = '💰';
+
+        foundCount++;
+        document.getElementById('found').textContent = foundCount;
+
+        remainingTreasures.delete(idx);
+        updateAllRevealedHints();
+
+        msgEl.textContent = pickRandom(messages.foundTreasure.toast);
+        showToast(pickRandom(messages.foundTreasure.toast));
+
+        gameOver = true;
+        return;
+      }
+
+      // 보물 못 찾은 경우 힌트 처리
+      const d = calcMinDistanceFromRemaining(idx);
+      applyHintVisual(tile, d);
+
+      if (d === null) {
+        const bMsg = pickRandom(messages.noneLeft.bottom);
+        const tMsg = pickRandom(messages.noneLeft.toast);
+        msgEl.textContent = bMsg;
+        showToast(tMsg);
+      } else if (d === 1) {
+        const bMsg = pickRandom(messages.near.bottom);
+        const tMsg = pickRandom(messages.near.toast);
+        msgEl.textContent = bMsg;
+        showToast(tMsg);
+      } else if (d === 2 || d === 3) {
+        const bMsg = pickRandom(messages.mid.bottom);
+        const tMsg = pickRandom(messages.mid.toast);
+        msgEl.textContent = bMsg;
+        showToast(tMsg);
+      } else {
+        const bMsg = pickRandom(messages.far.bottom);
+        const tMsg = pickRandom(messages.far.toast);
+        msgEl.textContent = bMsg;
+        showToast(tMsg);
+      }
+
+      // 시도 제한 체크 (보물을 아직 못 찾았고, 현재 한도까지 사용했을 때)
+      if (!gameOver && attempts >= getCurrentAttemptLimit()) {
+        showLimitModal();
+      }
+    }
+
+    function revealAllTreasures() {
+      const grid = document.getElementById('grid');
+      const tiles = grid.children;
+
+      for (let i = 0; i < tiles.length; i++) {
+        const tile = tiles[i];
+        const idx = parseInt(tile.dataset.index, 10);
+
+        if (rockPositions.has(idx)) continue;
+
+        if (!tile.classList.contains('revealed')) {
+          tile.classList.add('revealed');
+        }
+
+        if (treasurePositions.has(idx)) {
+          tile.classList.add('treasure');
+          tile.textContent = '💰';
+        }
+      }
+
+      gameOver = true;
+      document.getElementById('message').textContent =
+        '정답을 공개했어요! 다시 하려면 "다시 시작"을 눌러주세요.';
+      showToast(pickRandom(messages.reveal.toast));
+    }
+
+    function initGame() {
+      treasurePositions = new Set();
+      remainingTreasures = new Set();
+      rockPositions = new Set();
+      attempts = 0;
+      foundCount = 0;
+      gameOver = false;
+      extraAttemptUsed = false;
+      limitModalVisible = false;
+
+      const backdrop = document.getElementById('limitModalBackdrop');
+      backdrop.classList.remove('show');
+
+      // 보물 위치 랜덤(1개)
+      while (treasurePositions.size < TREASURE_COUNT) {
+        const idx = Math.floor(Math.random() * GRID_SIZE * GRID_SIZE);
+        treasurePositions.add(idx);
+      }
+
+      // 바위 위치 랜덤 (보물과 겹치지 않게)
+      while (rockPositions.size < ROCK_COUNT) {
+        const idx = Math.floor(Math.random() * GRID_SIZE * GRID_SIZE);
+        if (!treasurePositions.has(idx)) {
+          rockPositions.add(idx);
+        }
+      }
+
+      treasurePositions.forEach(idx => remainingTreasures.add(idx));
+
+      document.getElementById('attempts').textContent = attempts + '/' + BASE_ATTEMPT_LIMIT;
+      document.getElementById('found').textContent = foundCount;
+      document.getElementById('message').textContent = '보물섬을 탐험해 보세요!';
+
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      // 타일 생성
+      for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.dataset.index = i;
+        tile.textContent = '';
+
+        if (rockPositions.has(i)) {
+          tile.classList.add('rock');
+          tile.textContent = '⛰️';
+        } else {
+          tile.addEventListener('click', onTileClick);
+        }
+
+        grid.appendChild(tile);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initGame();
+
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        initGame();
+      });
+
+      document.getElementById('revealBtn').addEventListener('click', () => {
+        if (!gameOver) {
+          revealAllTreasures();
+        }
+      });
+
+      const adButton = document.getElementById('adButton');
+      const giveUpButton = document.getElementById('giveUpButton');
+
+      adButton.addEventListener('click', () => {
+        if (extraAttemptUsed) {
+          showToast(pickRandom(messages.noMoreAd.toast));
+          return;
+        }
+
+        extraAttemptUsed = true; // 실제 광고는 없고, 그냥 1회 추가
+        const tMsg = pickRandom(messages.extraChance.toast);
+        showToast(tMsg);
+
+        hideLimitModal();
+      });
+
+      giveUpButton.addEventListener('click', () => {
+        hideLimitModal();
+        if (!gameOver) {
+          revealAllTreasures();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
