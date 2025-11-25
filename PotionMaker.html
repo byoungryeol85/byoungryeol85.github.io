@@ -69,6 +69,7 @@
   }
 
   #grid {
+    position: relative; /* 드래그 박스 기준 */
     flex: 1;
     display: grid;
     grid-template-columns: repeat(8, 1fr);
@@ -273,6 +274,16 @@
     font-weight: 700;
     color: #5d4037;
   }
+
+  /* 드래그 박스 (윈도우 선택 박스 느낌) */
+  .drag-box {
+    position: absolute;
+    border: 2px dashed rgba(255, 183, 77, 0.95);
+    background: rgba(255, 224, 178, 0.25);
+    border-radius: 10px;
+    pointer-events: none;
+    z-index: 10;
+  }
 </style>
 </head>
 <body>
@@ -282,7 +293,7 @@
     <div class="stats">
       <div class="stat-group">
         <span class="stat-label">TIME</span>
-        <span id="time" class="stat-value">60</span>
+        <span id="time" class="stat-value">90</span>
       </div>
       <div class="stat-group">
         <span class="stat-label">SUM</span>
@@ -303,14 +314,14 @@
   </div>
 </div>
 
-<!-- 🪟 시작 팝업 -->
+<!-- 시작 팝업 -->
 <div id="startOverlay" class="overlay">
   <div class="overlay-box">
     <div class="overlay-title">포션 메이커</div>
     <div class="overlay-text">
       어지럽혀진 포션들을 정리할 시간이에요!<br>
       포션을 드래그 해서 용량 10짜리 포션을 만들면 성공!<br>
-      60초 동안 최대한 많이 만들어보세요!
+      90초 동안 최대한 많이 만들어보세요!
     </div>
     <div class="overlay-buttons">
       <button id="startBtn">게임 시작</button>
@@ -318,7 +329,7 @@
   </div>
 </div>
 
-<!-- 🪟 시간 종료 팝업 -->
+<!-- 시간 종료 팝업 -->
 <div id="overlay" class="overlay hidden">
   <div class="overlay-box">
     <div class="overlay-title">⏰ 시간 종료!</div>
@@ -356,13 +367,48 @@
   let score = 0;
 
   let isDragging = false;
-  let dragStartCell = null;
-  let dragEndCell = null;
 
-  let timeLeft = 60;
+  let timeLeft = 90;
   let timerId = null;
   let gameOver = false;
   let bestScore = 0;
+
+  // 드래그 박스 관련
+  let dragBoxEl = null;
+  let dragStartPxX = 0;
+  let dragStartPxY = 0;
+  let dragEndPxX = 0;
+  let dragEndPxY = 0;
+
+  function ensureDragBox() {
+    if (!dragBoxEl) {
+      dragBoxEl = document.createElement("div");
+      dragBoxEl.className = "drag-box";
+      dragBoxEl.style.display = "none";
+      gridEl.appendChild(dragBoxEl);
+    } else if (!gridEl.contains(dragBoxEl)) {
+      gridEl.appendChild(dragBoxEl);
+    }
+  }
+
+  function showDragBox(x1, y1, x2, y2) {
+    ensureDragBox();
+    const left = Math.min(x1, x2);
+    const top = Math.min(y1, y2);
+    const width = Math.abs(x2 - x1);
+    const height = Math.abs(y2 - y1);
+    dragBoxEl.style.display = "block";
+    dragBoxEl.style.left = left + "px";
+    dragBoxEl.style.top = top + "px";
+    dragBoxEl.style.width = width + "px";
+    dragBoxEl.style.height = height + "px";
+  }
+
+  function hideDragBox() {
+    if (dragBoxEl) {
+      dragBoxEl.style.display = "none";
+    }
+  }
 
   function loadBestScore() {
     const saved = localStorage.getItem(BEST_KEY);
@@ -417,11 +463,11 @@
         span.textContent = cellData.value;
         cell.appendChild(span);
 
-        cell.addEventListener("pointerdown", (e) => onPointerDown(e, cellData));
         cellData.el = cell;
         gridEl.appendChild(cell);
       });
     });
+    ensureDragBox();
   }
 
   function setMessage(text) {
@@ -444,68 +490,71 @@
     sumEl.textContent = "0";
   }
 
-  function applyRectSelection() {
-    if (!dragStartCell || !dragEndCell) return;
-
+  // 드래그 박스 픽셀 기준으로 어떤 셀들이 들어왔는지 계산
+  function applyRectSelectionByPixels() {
     clearSelectionVisual();
+    const rect = gridEl.getBoundingClientRect();
 
-    const minX = Math.min(dragStartCell.x, dragEndCell.x);
-    const maxX = Math.max(dragStartCell.x, dragEndCell.x);
-    const minY = Math.min(dragStartCell.y, dragEndCell.y);
-    const maxY = Math.max(dragStartCell.y, dragEndCell.y);
+    const minX = Math.min(dragStartPxX, dragEndPxX);
+    const maxX = Math.max(dragStartPxX, dragEndPxX);
+    const minY = Math.min(dragStartPxY, dragEndPxY);
+    const maxY = Math.max(dragStartPxY, dragEndPxY);
 
-    for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        const cellData = grid[y][x];
-        if (!cellData.cleared) {
+    grid.forEach(row => {
+      row.forEach(cellData => {
+        if (cellData.cleared || !cellData.el) return;
+        const cr = cellData.el.getBoundingClientRect();
+        const centerX = cr.left - rect.left + cr.width / 2;
+        const centerY = cr.top - rect.top + cr.height / 2;
+
+        if (centerX >= minX && centerX <= maxX && centerY >= minY && centerY <= maxY) {
           selected.push(cellData);
-          if (cellData.el) {
-            cellData.el.classList.add("selected");
-          }
+          cellData.el.classList.add("selected");
         }
-      }
-    }
+      });
+    });
 
     updateSum();
-    setMessage("사각형 안 숫자의 합이 10이면 포션이 정리됩니다.");
+    if (selected.length > 0) {
+      setMessage("사각형 안 숫자의 합이 10이면 포션이 정리됩니다.");
+    } else {
+      setMessage("");
+    }
   }
 
-  function onPointerDown(e, cellData) {
+  function onPointerDownGrid(e) {
     if (gameOver) return;
-    if (cellData.cleared) return;
 
     isDragging = true;
-    dragStartCell = cellData;
-    dragEndCell = cellData;
     clearSelectionVisual();
 
-    applyRectSelection();
+    const rect = gridEl.getBoundingClientRect();
+    dragStartPxX = e.clientX - rect.left;
+    dragStartPxY = e.clientY - rect.top;
+    dragEndPxX = dragStartPxX;
+    dragEndPxY = dragStartPxY;
 
-    e.preventDefault(); // 모바일에서 스크롤/더블탭 확대 방지
-  }
+    showDragBox(dragStartPxX, dragStartPxY, dragEndPxX, dragEndPxY);
+    applyRectSelectionByPixels();
 
-  function getCellFromEventTarget(target) {
-    const cellEl = target.closest(".cell");
-    if (!cellEl) return null;
-    const x = Number(cellEl.dataset.x);
-    const y = Number(cellEl.dataset.y);
-    if (Number.isNaN(x) || Number.isNaN(y)) return null;
-    return grid[y]?.[x] || null;
+    e.preventDefault();
   }
 
   function onPointerMove(e) {
     if (!isDragging || gameOver) return;
 
-    const cellData = getCellFromEventTarget(e.target);
-    if (!cellData || cellData === dragEndCell) return;
+    const rect = gridEl.getBoundingClientRect();
+    dragEndPxX = e.clientX - rect.left;
+    dragEndPxY = e.clientY - rect.top;
 
-    dragEndCell = cellData;
-    applyRectSelection();
+    showDragBox(dragStartPxX, dragStartPxY, dragEndPxX, dragEndPxY);
+    applyRectSelectionByPixels();
   }
 
   function finishDrag() {
     if (!isDragging) return;
     isDragging = false;
+    hideDragBox();
 
     if (selected.length === 0) {
       clearSelectionVisual();
@@ -515,7 +564,6 @@
     const sum = currentSum;
 
     if (sum === 10 && !gameOver) {
-      // 정답: 영역 내 칸 제거
       const removedCount = selected.length;
       score += removedCount;  // 점수 = 제거된 블록 개수
       scoreEl.textContent = score;
@@ -529,7 +577,6 @@
         }
       });
     } else {
-      // 오답: 선택만 초기화
       setMessage(`합이 ${sum}입니다. 10이 아니에요. 다시 시도해 보세요.`);
       selected.forEach(c => {
         if (c.el && !c.cleared) {
@@ -542,8 +589,6 @@
     }
 
     clearSelectionVisual();
-    dragStartCell = null;
-    dragEndCell = null;
   }
 
   function onPointerUp(e) {
@@ -576,7 +621,7 @@
 
   function startTimer() {
     if (timerId) clearInterval(timerId);
-    timeLeft = 60;
+    timeLeft = 90;
     timeEl.textContent = timeLeft;
     timeEl.classList.remove("time-danger");
     gameOver = false;
@@ -614,18 +659,18 @@
     }
     hideGameOverOverlay();
     hideStartOverlay();
+    hideDragBox();
     score = 0;
     scoreEl.textContent = "0";
     clearSelectionVisual();
-    dragStartCell = null;
-    dragEndCell = null;
     setMessage("사각형으로 드래그해서 합이 10인 포션을 만들어보세요.");
     createGridData();
     renderGrid();
     startTimer();
   }
 
-  // 이벤트 리스너는 한 번만 등록
+  // 이벤트 리스너들
+  gridEl.addEventListener("pointerdown", onPointerDownGrid);
   gridEl.addEventListener("pointermove", onPointerMove);
   gridEl.addEventListener("pointerup", onPointerUp);
   gridEl.addEventListener("pointerleave", onPointerLeave);
@@ -634,7 +679,7 @@
   overlayRestartBtn.addEventListener("click", resetGame);
   startBtn.addEventListener("click", resetGame);
 
-  // 초기 실행: 격자만 만들고, 타이머는 시작하지 않음
+  // 초기 실행
   loadBestScore();
   createGridData();
   renderGrid();
