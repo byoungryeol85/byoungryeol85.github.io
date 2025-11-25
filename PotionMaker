@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>포션 메이커</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 16px 8px;
+    user-select: none; /* 텍스트 드래그 방지 */
+  }
+
+  .game-wrapper {
+    width: min(90vw, 420px);
+    max-height: 75vh; /* 세로 화면의 3/4 정도 느낌 */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .title {
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .stats {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    align-items: baseline;
+  }
+
+  .stat-group {
+    display: flex;
+    gap: 4px;
+    align-items: baseline;
+  }
+
+  .stat-label {
+    color: #555;
+    font-size: 12px;
+  }
+
+  .stat-value {
+    font-weight: 800;
+    font-size: 18px; /* 크게 */
+  }
+
+  #time.time-danger {
+    color: #d32f2f;
+  }
+
+  #grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #e5e5e5;
+    padding: 4px;
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    touch-action: none; /* 브라우저 기본 스크롤 제스처 방지 */
+  }
+
+  .cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    overflow: visible;
+    transition: transform 0.08s ease, box-shadow 0.08s ease,
+                background 0.15s ease, opacity 0.15s ease;
+  }
+
+  /* 동그란 물약병 (유리) */
+  .cell::before {
+    content: "";
+    position: absolute;
+    width: 72%;
+    height: 72%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.85), rgba(255,245,245,0.9));
+    border: 2px solid rgba(255, 143, 143, 0.6);
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.08),
+      0 0 0 1px rgba(255,255,255,0.8) inset;
+    z-index: 1;
+  }
+
+  /* 물약 액체 – 은은한 빨간색, 간접 표현 */
+  .cell::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 14%;
+    width: 58%;
+    height: var(--fill, 25%);
+    transform: translateX(-50%);
+    border-radius: 999px 999px 40% 40%;
+    background: linear-gradient(
+      to top,
+      rgba(255, 138, 128, 0.45),
+      rgba(255, 205, 210, 0.3)
+    );
+    box-shadow: 0 -2px 3px rgba(255, 255, 255, 0.6) inset;
+    z-index: 2;
+    transition: height 0.15s ease;
+  }
+
+  .cell span.value {
+    position: relative;
+    z-index: 3;
+    color: #4e342e;
+    font-size: 18px;
+    font-weight: 800;
+    text-shadow:
+      0 1px 2px rgba(255,255,255,0.9),
+      0 -1px 1px rgba(0,0,0,0.05);
+  }
+
+  .cell.selected::before {
+    box-shadow:
+      0 0 0 2px rgba(255, 183, 77, 0.8),
+      0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .cell.cleared {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .cell.cleared::before,
+  .cell.cleared::after {
+    filter: grayscale(60%);
+    opacity: 0.5;
+  }
+  .cell.cleared span.value {
+    opacity: 0;
+  }
+
+  .cell.highlight {
+    animation: blink 0.2s ease-in-out 2;
+  }
+
+  @keyframes blink {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    gap: 8px;
+  }
+
+  .message {
+    flex: 1;
+    font-size: 12px;
+    color: #555;
+    min-height: 1.2em;
+  }
+
+  button {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #ff7043;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    touch-action: manipulation;
+  }
+
+  button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+
+  /* 공통 오버레이 */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.35);
+    z-index: 999;
+  }
+
+  .overlay.hidden {
+    display: none;
+  }
+
+  .overlay-box {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 20px 18px 16px;
+    min-width: min(80vw, 320px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+
+  .overlay-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+
+  .overlay-score {
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+
+  .overlay-best {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 14px;
+  }
+
+  .overlay-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .overlay-buttons button {
+    font-size: 13px;
+    padding: 7px 16px;
+  }
+
+  .overlay-text {
+    font-size: 14px;
+    color: #444;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .badge-new {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #ffca28;
+    font-size: 11px;
+    font-weight: 700;
+    color: #5d4037;
+  }
+</style>
+</head>
+<body>
+<div class="game-wrapper">
+  <div class="header">
+    <div class="title">🧪 포션 메이커</div>
+    <div class="stats">
+      <div class="stat-group">
+        <span class="stat-label">TIME</span>
+        <span id="time" class="stat-value">60</span>
+      </div>
+      <div class="stat-group">
+        <span class="stat-label">SUM</span>
+        <span id="sum" class="stat-value">0</span>
+      </div>
+      <div class="stat-group">
+        <span class="stat-label">SCORE</span>
+        <span id="score" class="stat-value">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="grid"></div>
+
+  <div class="controls">
+    <div id="message" class="message"></div>
+    <button id="resetBtn">다시</button>
+  </div>
+</div>
+
+<!-- 🪟 시작 팝업 -->
+<div id="startOverlay" class="overlay">
+  <div class="overlay-box">
+    <div class="overlay-title">포션 메이커</div>
+    <div class="overlay-text">
+      어지럽혀진 포션들을 정리할 시간이에요!<br>
+      포션을 드래그 해서 용량 10짜리 포션을 만들면 성공!<br>
+      60초 동안 최대한 많이 만들어보세요!
+    </div>
+    <div class="overlay-buttons">
+      <button id="startBtn">게임 시작</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🪟 시간 종료 팝업 -->
+<div id="overlay" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="overlay-title">⏰ 시간 종료!</div>
+    <div id="overlayCurrent" class="overlay-score"></div>
+    <div id="overlayBest" class="overlay-best"></div>
+    <div class="overlay-buttons">
+      <button id="overlayRestart">다시 플레이</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const COLS = 8;
+  const ROWS = 10;
+  const gridEl = document.getElementById("grid");
+  const sumEl = document.getElementById("sum");
+  const scoreEl = document.getElementById("score");
+  const messageEl = document.getElementById("message");
+  const resetBtn = document.getElementById("resetBtn");
+  const timeEl = document.getElementById("time");
+
+  const overlayEl = document.getElementById("overlay");
+  const overlayCurrentEl = document.getElementById("overlayCurrent");
+  const overlayBestEl = document.getElementById("overlayBest");
+  const overlayRestartBtn = document.getElementById("overlayRestart");
+
+  const startOverlayEl = document.getElementById("startOverlay");
+  const startBtn = document.getElementById("startBtn");
+
+  const BEST_KEY = "apple_drag_rect_best_score_v1";
+
+  let grid = [];
+  let selected = [];
+  let currentSum = 0;
+  let score = 0;
+
+  let isDragging = false;
+  let dragStartCell = null;
+  let dragEndCell = null;
+
+  let timeLeft = 60;
+  let timerId = null;
+  let gameOver = false;
+  let bestScore = 0;
+
+  function loadBestScore() {
+    const saved = localStorage.getItem(BEST_KEY);
+    if (saved !== null) {
+      const val = Number(saved);
+      if (!Number.isNaN(val)) bestScore = val;
+    }
+  }
+
+  function saveBestScore() {
+    localStorage.setItem(BEST_KEY, String(bestScore));
+  }
+
+  function randValue() {
+    // 1~9, 1~5가 조금 더 잘 나오게
+    const weights = [1,2,3,4,5,6,7,8,9,1,2,3,4,5];
+    return weights[Math.floor(Math.random() * weights.length)];
+  }
+
+  function createGridData() {
+    grid = [];
+    for (let y = 0; y < ROWS; y++) {
+      const row = [];
+      for (let x = 0; x < COLS; x++) {
+        row.push({
+          x,
+          y,
+          value: randValue(),
+          cleared: false,
+          el: null
+        });
+      }
+      grid.push(row);
+    }
+  }
+
+  function renderGrid() {
+    gridEl.innerHTML = "";
+    grid.forEach(row => {
+      row.forEach(cellData => {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.x = cellData.x;
+        cell.dataset.y = cellData.y;
+
+        // 포션 높이: 값 1~9 → 20~70% 정도 (은은하게)
+        const fillPercent = 20 + (cellData.value - 1) * (50 / 8); // 20~70%
+        cell.style.setProperty("--fill", fillPercent + "%");
+
+        const span = document.createElement("span");
+        span.className = "value";
+        span.textContent = cellData.value;
+        cell.appendChild(span);
+
+        cell.addEventListener("pointerdown", (e) => onPointerDown(e, cellData));
+        cellData.el = cell;
+        gridEl.appendChild(cell);
+      });
+    });
+  }
+
+  function setMessage(text) {
+    messageEl.textContent = text || "";
+  }
+
+  function updateSum() {
+    currentSum = selected.reduce((acc, c) => acc + c.value, 0);
+    sumEl.textContent = currentSum;
+  }
+
+  function clearSelectionVisual() {
+    selected.forEach(c => {
+      if (c.el && !c.cleared) {
+        c.el.classList.remove("selected");
+      }
+    });
+    selected = [];
+    currentSum = 0;
+    sumEl.textContent = "0";
+  }
+
+  function applyRectSelection() {
+    if (!dragStartCell || !dragEndCell) return;
+
+    clearSelectionVisual();
+
+    const minX = Math.min(dragStartCell.x, dragEndCell.x);
+    const maxX = Math.max(dragStartCell.x, dragEndCell.x);
+    const minY = Math.min(dragStartCell.y, dragEndCell.y);
+    const maxY = Math.max(dragStartCell.y, dragEndCell.y);
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const cellData = grid[y][x];
+        if (!cellData.cleared) {
+          selected.push(cellData);
+          if (cellData.el) {
+            cellData.el.classList.add("selected");
+          }
+        }
+      }
+    }
+
+    updateSum();
+    setMessage("사각형 안 숫자의 합이 10이면 포션이 정리됩니다.");
+  }
+
+  function onPointerDown(e, cellData) {
+    if (gameOver) return;
+    if (cellData.cleared) return;
+
+    isDragging = true;
+    dragStartCell = cellData;
+    dragEndCell = cellData;
+    clearSelectionVisual();
+
+    applyRectSelection();
+
+    e.preventDefault(); // 모바일에서 스크롤/더블탭 확대 방지
+  }
+
+  function getCellFromEventTarget(target) {
+    const cellEl = target.closest(".cell");
+    if (!cellEl) return null;
+    const x = Number(cellEl.dataset.x);
+    const y = Number(cellEl.dataset.y);
+    if (Number.isNaN(x) || Number.isNaN(y)) return null;
+    return grid[y]?.[x] || null;
+  }
+
+  function onPointerMove(e) {
+    if (!isDragging || gameOver) return;
+
+    const cellData = getCellFromEventTarget(e.target);
+    if (!cellData || cellData === dragEndCell) return;
+
+    dragEndCell = cellData;
+    applyRectSelection();
+  }
+
+  function finishDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+
+    if (selected.length === 0) {
+      clearSelectionVisual();
+      return;
+    }
+
+    const sum = currentSum;
+
+    if (sum === 10 && !gameOver) {
+      // 정답: 영역 내 칸 제거
+      const removedCount = selected.length;
+      score += removedCount;  // 점수 = 제거된 블록 개수
+      scoreEl.textContent = score;
+      setMessage(`정답! 용량 10짜리 포션 완성! (블록 ${removedCount}개 정리) 🧪`);
+
+      selected.forEach(c => {
+        c.cleared = true;
+        if (c.el) {
+          c.el.classList.remove("selected");
+          c.el.classList.add("cleared");
+        }
+      });
+    } else {
+      // 오답: 선택만 초기화
+      setMessage(`합이 ${sum}입니다. 10이 아니에요. 다시 시도해 보세요.`);
+      selected.forEach(c => {
+        if (c.el && !c.cleared) {
+          c.el.classList.add("highlight");
+          setTimeout(() => {
+            if (c.el) c.el.classList.remove("highlight");
+          }, 200);
+        }
+      });
+    }
+
+    clearSelectionVisual();
+    dragStartCell = null;
+    dragEndCell = null;
+  }
+
+  function onPointerUp(e) {
+    finishDrag();
+  }
+
+  function onPointerLeave(e) {
+    finishDrag();
+  }
+
+  function showGameOverOverlay() {
+    gameOver = true;
+    let isNewRecord = false;
+    if (score > bestScore) {
+      bestScore = score;
+      isNewRecord = true;
+      saveBestScore();
+    }
+
+    overlayCurrentEl.textContent = `이번 점수: ${score}점`;
+    if (isNewRecord) {
+      overlayBestEl.innerHTML =
+        `최고 기록 갱신! <span class="badge-new">NEW</span>`;
+    } else {
+      overlayBestEl.textContent = `현재 최고 기록: ${bestScore}점`;
+    }
+
+    overlayEl.classList.remove("hidden");
+  }
+
+  function startTimer() {
+    if (timerId) clearInterval(timerId);
+    timeLeft = 60;
+    timeEl.textContent = timeLeft;
+    timeEl.classList.remove("time-danger");
+    gameOver = false;
+
+    timerId = setInterval(() => {
+      timeLeft--;
+      if (timeLeft < 0) timeLeft = 0;
+      timeEl.textContent = timeLeft;
+
+      if (timeLeft <= 10) {
+        timeEl.classList.add("time-danger");
+      }
+
+      if (timeLeft <= 0) {
+        clearInterval(timerId);
+        timerId = null;
+        setMessage(`시간 종료! 최종 점수: ${score}점`);
+        showGameOverOverlay();
+      }
+    }, 1000);
+  }
+
+  function hideGameOverOverlay() {
+    overlayEl.classList.add("hidden");
+  }
+
+  function hideStartOverlay() {
+    startOverlayEl.classList.add("hidden");
+  }
+
+  function resetGame() {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+    hideGameOverOverlay();
+    hideStartOverlay();
+    score = 0;
+    scoreEl.textContent = "0";
+    clearSelectionVisual();
+    dragStartCell = null;
+    dragEndCell = null;
+    setMessage("사각형으로 드래그해서 합이 10인 포션을 만들어보세요.");
+    createGridData();
+    renderGrid();
+    startTimer();
+  }
+
+  // 이벤트 리스너는 한 번만 등록
+  gridEl.addEventListener("pointermove", onPointerMove);
+  gridEl.addEventListener("pointerup", onPointerUp);
+  gridEl.addEventListener("pointerleave", onPointerLeave);
+
+  resetBtn.addEventListener("click", resetGame);
+  overlayRestartBtn.addEventListener("click", resetGame);
+  startBtn.addEventListener("click", resetGame);
+
+  // 초기 실행: 격자만 만들고, 타이머는 시작하지 않음
+  loadBestScore();
+  createGridData();
+  renderGrid();
+  setMessage("게임을 시작하려면 [게임 시작] 버튼을 눌러주세요.");
+</script>
+</body>
+</html>
