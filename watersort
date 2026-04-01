@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>워터 소트 V12 - 개발자 판 복구 모드</title>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background: #0f172a; color: #f8fafc; text-align: center; margin: 0; overflow: hidden; user-select: none; }
+        .header { padding: 15px; background: #1e293b; border-bottom: 4px solid #334155; }
+        .btn-group button { padding: 10px 18px; margin: 5px; cursor: pointer; border: none; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+        .btn-1 { background: #ef4444; color: white; }
+        .btn-2 { background: #3b82f6; color: white; }
+        .btn-3 { background: #10b981; color: white; }
+        .btn-dev { background: #1e293b; color: #fbbf24; border: 2px solid #fbbf24; } /* 개발자용 눈에 띄는 색상 */
+        .btn-dev:hover { background: #fbbf24; color: #000; }
+        
+        .timer-container { margin: 15px; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        #timer-bar { width: 250px; height: 15px; background: #334155; border-radius: 10px; overflow: hidden; border: 2px solid #475569; }
+        #timer-fill { width: 100%; height: 100%; background: #fbbf24; }
+        .btn-user-reset { background: #64748b; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; }
+        
+        .dashboard { background: #1e293b; padding: 10px; border-radius: 12px; display: inline-block; border: 1px solid #334155; }
+        .game-container { display: flex; justify-content: center; gap: 15px; padding: 20px; min-height: 250px; }
+        
+        .bottle {
+            width: 60px; height: 180px; border: 3px solid #94a3b8; border-radius: 0 0 20px 20px;
+            display: flex; flex-direction: column-reverse; cursor: pointer; transition: 0.2s; background: #020617;
+        }
+        .bottle.selected { transform: translateY(-20px); border-color: #fbbf24; box-shadow: 0 0 15px #fbbf24; }
+        .bottle.locked { opacity: 0.5; cursor: wait; }
+        .water-layer { width: 100%; height: 25%; border-top: 1px solid rgba(255,255,255,0.05); }
+        .msg { font-size: 1.3rem; font-weight: bold; height: 35px; margin-top: 5px; }
+        .stuck-alert { color: #f43f5e; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .success { color: #10b981; }
+        .fail { color: #ef4444; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🧪 Water Sort V12 (Developer Fix)</h1>
+    <div class="btn-group">
+        <button class="btn-1" onclick="createNewStage(1)">1번: 어려움 (30s)</button>
+        <button class="btn-2" onclick="createNewStage(2)">2번: 보통 (20s)</button>
+        <button class="btn-3" onclick="createNewStage(3)">3번: 보통 (30s)</button>
+        <button class="btn-dev" onclick="devReset()">⏱️ [개발용] 판 전체 초기화 (배열+시간)</button>
+    </div>
+</div>
+
+<div class="timer-container">
+    <div id="timer-bar"><div id="timer-fill"></div></div>
+    <div id="timer-text" style="font-weight: bold; width: 80px;">--s</div>
+    <button class="btn-user-reset" onclick="softReset()">🔄 [사용자] 스테이지 재시작 (시간 유지)</button>
+</div>
+
+<div class="dashboard">
+    <div id="stat-text">난이도를 선택해 주세요</div>
+</div>
+
+<div id="msg" class="msg"></div>
+<div class="game-container" id="game-container"></div>
+
+<script>
+    const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7'];
+    let stageData = [], currentData = [], selectedIdx = null;
+    let isLocked = false, gameActive = false;
+    let timeLeft = 0, totalTime = 0, timerInterval = null, currentType = 1;
+
+    // 새 스테이지 생성 (난이도 버튼 클릭 시만 호출)
+    function createNewStage(type) {
+        currentType = type;
+        stopTimer();
+        document.getElementById('msg').innerText = "새 배치 생성 중...";
+        document.getElementById('msg').className = "msg";
+        
+        let colorCount, targetRange;
+        if(type === 1) { colorCount = 4; totalTime = 30; targetRange = [10, 30]; }
+        else { colorCount = 4; totalTime = (type === 2) ? 20 : 30; targetRange = [35, 70]; }
+
+        setTimeout(() => {
+            let bestStage = null;
+            for(let i = 0; i < 200; i++) {
+                let test = generate(colorCount);
+                if(!hasValidMove(test)) continue; 
+                let rate = simulate(test);
+                if(rate >= targetRange[0] && rate <= targetRange[1]) { bestStage = test; break; }
+                if(!bestStage) bestStage = test;
+            }
+            stageData = JSON.parse(JSON.stringify(bestStage));
+            devReset(); // 생성 후 첫 시작은 시간과 함께 초기화
+        }, 100);
+    }
+
+    // [개발자용] 현재 판의 배열과 시간을 모두 처음으로 되돌림
+    function devReset() {
+        if(!stageData.length) return;
+        stopTimer();
+        timeLeft = totalTime;
+        currentData = JSON.parse(JSON.stringify(stageData));
+        selectedIdx = null;
+        isLocked = false;
+        gameActive = true;
+        document.getElementById('msg').innerText = "⏱️ 판 전체 초기화 완료 (테스트 모드)";
+        document.getElementById('msg').className = "msg";
+        document.getElementById('stat-text').innerHTML = `<b>모드 ${currentType}</b> | 색상: ${stageData.filter(b=>b.length>0).length} | 병: 5`;
+        render();
+        startTimer();
+    }
+
+    // [사용자용] 현재 판의 배열만 처음으로 되돌림 (시간은 계속 흐름)
+    function softReset() {
+        if(!stageData.length || !gameActive) return;
+        currentData = JSON.parse(JSON.stringify(stageData));
+        selectedIdx = null;
+        isLocked = false;
+        document.getElementById('msg').innerText = "🔄 배열 초기화 (시간 유지)";
+        document.getElementById('msg').className = "msg";
+        render();
+    }
+
+    function stopTimer() { if(timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+
+    function startTimer() {
+        stopTimer();
+        gameActive = true;
+        let lastTime = Date.now();
+        timerInterval = setInterval(() => {
+            if(!gameActive) return;
+            let now = Date.now();
+            timeLeft -= (now - lastTime) / 1000;
+            lastTime = now;
+            if(timeLeft <= 0) { timeLeft = 0; endGame("⏰ 시간 초과! 실패", false); }
+            updateTimerUI();
+        }, 50);
+    }
+
+    function updateTimerUI() {
+        const percent = Math.max(0, (timeLeft / totalTime) * 100);
+        document.getElementById('timer-fill').style.width = percent + "%";
+        document.getElementById('timer-text').innerText = `${timeLeft.toFixed(1)}s`;
+        document.getElementById('timer-fill').style.background = percent < 30 ? "#f43f5e" : "#fbbf24";
+    }
+
+    function generate(colors) {
+        let b = Array.from({length: colors}, (_, i) => new Array(4).fill(COLORS[i]));
+        while(b.length < 5) b.push([]); 
+        for(let i=0; i<80; i++) {
+            let f = Math.floor(Math.random()*5), t = Math.floor(Math.random()*5);
+            if(f!==t && b[f].length>0 && b[t].length<4) b[t].push(b[f].pop());
+        }
+        return b;
+    }
+
+    function hasValidMove(state) {
+        for(let f=0; f<5; f++) {
+            for(let t=0; t<5; t++) {
+                if(f===t) continue;
+                if(state[f].length > 0 && state[t].length < 4) {
+                    if(state[t].length === 0 || state[f][state[f].length-1] === state[t][state[t].length-1]) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function simulate(origin) {
+        let wins = 0;
+        for(let i=0; i<40; i++) {
+            let s = JSON.parse(JSON.stringify(origin));
+            let m = 0;
+            while(m < 60) {
+                let moves = [];
+                for(let f=0; f<5; f++) {
+                    for(let t=0; t<5; t++) {
+                        if(f!==t && s[f].length>0 && s[t].length<4 && (s[t].length===0 || s[t][s[t].length-1] === s[f][s[f].length-1])) moves.push([f,t]);
+                    }
+                }
+                if(moves.length===0) break;
+                let [f,t] = moves[Math.floor(Math.random()*moves.length)];
+                let c = s[f][s[f].length-1];
+                while(s[f].length>0 && s[t].length<4 && s[f][s[f].length-1] === c) s[t].push(s[f].pop());
+                if(s.every(b => b.length===0 || (b.length===4 && b.every(v => v===b[0])))) { wins++; break; }
+                m++;
+            }
+        }
+        return (wins / 40) * 100;
+    }
+
+    async function handleBottleClick(idx) {
+        if(!gameActive || isLocked) return;
+        if(selectedIdx === null) {
+            if(currentData[idx].length > 0) selectedIdx = idx;
+        } else {
+            if(selectedIdx === idx) { selectedIdx = null; } 
+            else {
+                const f = currentData[selectedIdx], t = currentData[idx];
+                if(t.length < 4 && (t.length === 0 || t[t.length-1] === f[f.length-1])) {
+                    isLocked = true; render();
+                    await new Promise(res => setTimeout(res, 500)); 
+                    let color = f[f.length-1];
+                    while(f.length > 0 && t.length < 4 && f[f.length-1] === color) { t.push(f.pop()); }
+                    isLocked = false;
+                }
+                selectedIdx = null;
+            }
+        }
+        render();
+        if(!checkWin()) checkStuck();
+    }
+
+    function checkWin() {
+        const win = currentData.every(b => b.length===0 || (b.length===4 && b.every(v => v===b[0])));
+        if(win && currentData.some(b => b.length > 0)) { endGame("🎉 스테이지 클리어!", true); return true; }
+        return false;
+    }
+
+    function checkStuck() {
+        if(!hasValidMove(currentData)) {
+            document.getElementById('msg').innerText = "⚠️ 막혔습니다! 아래 초기화 버튼을 누르세요!";
+            document.getElementById('msg').className = "msg stuck-alert";
+        }
+    }
+
+    function endGame(message, isSuccess) {
+        gameActive = false; stopTimer();
+        document.getElementById('msg').innerText = message;
+        document.getElementById('msg').className = "msg " + (isSuccess ? "success" : "fail");
+    }
+
+    function render() {
+        const container = document.getElementById('game-container');
+        container.innerHTML = '';
+        currentData.forEach((bottle, idx) => {
+            const div = document.createElement('div');
+            div.className = `bottle ${selectedIdx === idx ? 'selected' : ''} ${isLocked ? 'locked' : ''}`;
+            div.onclick = () => handleBottleClick(idx);
+            bottle.forEach(c => {
+                const l = document.createElement('div');
+                l.className = 'water-layer';
+                l.style.backgroundColor = c;
+                div.appendChild(l);
+            });
+            container.appendChild(div);
+        });
+    }
+</script>
+</body>
+</html>
