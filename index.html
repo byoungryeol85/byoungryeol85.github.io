@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- [수정 포인트 1] 브라우저 탭 제목 -->
     <title>Byoungryeol's Arcade | Web Game Hub</title>
-    
+    <meta name="color-scheme" content="dark">
+
     <!-- Pretendard 웹폰트 -->
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
@@ -19,256 +20,175 @@
             --text-main: #f8fafc;
             --text-sub: #94a3b8;
             --status-live: #22c55e;
-            --status-off: #f59e0b;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-color);
-            background-image: 
+            background-image:
                 radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.14) 0px, transparent 45%),
                 radial-gradient(at 90% 90%, rgba(236, 72, 153, 0.1) 0px, transparent 45%);
+            background-attachment: fixed;
             color: var(--text-main);
             min-height: 100vh;
             padding: 48px 20px;
         }
 
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1040px; margin: 0 auto; }
 
         /* 상단 헤더 */
-        header {
-            text-align: center;
-            margin-bottom: 48px;
-        }
+        header { text-align: center; margin-bottom: 44px; }
 
         .hub-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            display: inline-flex; align-items: center; gap: 8px;
             background: rgba(99, 102, 241, 0.12);
             border: 1px solid rgba(99, 102, 241, 0.3);
             color: #a5b4fc;
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            margin-bottom: 16px;
-            letter-spacing: 0.5px;
+            padding: 6px 14px; border-radius: 999px;
+            font-size: 0.8rem; font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px;
         }
-
         .hub-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--status-live);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--status-live);
+            width: 8px; height: 8px; background: var(--status-live);
+            border-radius: 50%; box-shadow: 0 0 8px var(--status-live);
         }
-
         h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
+            font-size: 2.5rem; font-weight: 800; letter-spacing: -0.5px;
             background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
-            -webkit-background-clip: text;
+            -webkit-background-clip: text; background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
         }
+        .subtitle { color: var(--text-sub); font-size: 1.05rem; }
 
-        .subtitle {
-            color: var(--text-sub);
-            font-size: 1.05rem;
-        }
-
-        /* 그리드 레이아웃 */
+        /* 그리드 */
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 24px;
         }
 
-        /* 카드 기본 스타일 */
+        /* 카드 */
         .game-card {
             background: var(--card-bg);
             backdrop-filter: blur(12px);
             border: 1px solid var(--card-border);
             border-radius: 18px;
             overflow: hidden;
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            flex-direction: column;
+            text-decoration: none; color: inherit;
+            display: flex; flex-direction: column;
             transition: transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
             position: relative;
         }
-
-        .game-card:hover {
+        .game-card:hover, .game-card:focus-visible {
             transform: translateY(-6px);
             border-color: #818cf8;
             box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45), 0 0 20px var(--accent-glow);
+            outline: none;
         }
 
-        /* 썸네일 & 비디오 영역 */
+        /* 썸네일 영역 (16:10) */
         .thumb-wrapper {
             position: relative;
             width: 100%;
-            height: 170px;
+            aspect-ratio: 16 / 10;
             background: #141923;
             overflow: hidden;
             border-bottom: 1px solid var(--card-border);
         }
-
-        /* 썸네일 이미지가 없을 때 보여줄 기본 그래픽 배경 */
-        .thumb-fallback {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            transition: transform 0.35s ease;
+        .thumb-wrapper > .layer {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
         }
 
-        /* 비디오 스타일 (평소에는 숨겨두거나 포스터만 표시) */
+        /* 1) 대체 커버: 썸네일도, 실제 화면도 없을 때 */
+        .thumb-cover {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+            background: var(--cover, linear-gradient(135deg, #1e293b 0%, #0f172a 100%));
+            text-align: center; padding: 20px;
+        }
+        .thumb-cover .cover-emoji { font-size: 2.6rem; filter: drop-shadow(0 6px 14px rgba(0,0,0,.4)); }
+        .thumb-cover .cover-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.3px; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
+
+        /* 2) 썸네일 이미지 */
+        .thumb-img { object-fit: cover; transition: transform 0.35s ease; }
+        .game-card:hover .thumb-img { transform: scale(1.04); }
+
+        /* 3) 실제 게임 화면을 축소해서 보여주는 라이브 썸네일 (썸네일 이미지가 없을 때 자동) */
+        .thumb-live { overflow: hidden; background: #000; }
+        .thumb-live iframe {
+            position: absolute; top: 0; left: 0;
+            width: 960px; height: 600px;
+            border: 0;
+            transform-origin: 0 0;
+            pointer-events: none;
+        }
+
+        /* 4) 마우스 올리면 재생되는 미리보기 영상 */
         .preview-video {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
             object-fit: cover;
             opacity: 0;
             transition: opacity 0.3s ease;
             pointer-events: none;
         }
+        .game-card.playing .preview-video { opacity: 1; }
 
-        /* 마우스 올렸을 때 비디오 서서히 나타나기 */
-        .game-card:hover .preview-video.has-video {
-            opacity: 1;
+        /* 뱃지 */
+        .genre-tag, .status-badge {
+            position: absolute; top: 12px; z-index: 3;
+            font-size: 0.72rem; font-weight: 700;
+            padding: 4px 10px; border-radius: 6px;
+            backdrop-filter: blur(6px);
         }
-
-        .game-card:hover .thumb-fallback {
-            transform: scale(1.06);
-        }
-
-        /* 우측 상단 장르 뱃지 */
         .genre-tag {
-            position: absolute;
-            top: 12px;
             right: 12px;
             background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(6px);
             border: 1px solid rgba(255, 255, 255, 0.12);
             color: #e2e8f0;
-            font-size: 0.72rem;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 6px;
-            z-index: 2;
         }
+        .status-badge { left: 12px; display: inline-flex; align-items: center; gap: 5px; }
+        .status-badge.live    { background: rgba(20, 83, 45, 0.85);  border: 1px solid rgba(34, 197, 94, 0.4);  color: #86efac; }
+        .status-badge.new     { background: rgba(131, 24, 67, 0.88); border: 1px solid rgba(244, 114, 182, 0.5); color: #fbcfe8; }
+        .status-badge.offline { background: rgba(120, 53, 15, 0.88); border: 1px solid rgba(245, 158, 11, 0.4); color: #fcd34d; }
 
-        /* 좌측 상단 작동 상태 뱃지 */
-        .status-badge {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 6px;
-            z-index: 2;
-            backdrop-filter: blur(6px);
+        /* 영상 재생 중 표시 */
+        .preview-hint {
+            position: absolute; right: 12px; bottom: 10px; z-index: 3;
+            font-size: 0.7rem; font-weight: 700; color: #e2e8f0;
+            background: rgba(15, 23, 42, 0.7); border-radius: 6px; padding: 3px 8px;
+            opacity: 0; transition: opacity .2s ease;
         }
+        .game-card.playing .preview-hint { opacity: 1; }
 
-        /* 정상 작동(LIVE) 상태 스타일 */
-        .status-badge.live {
-            background: rgba(20, 83, 45, 0.8);
-            border: 1px solid rgba(34, 197, 94, 0.4);
-            color: #86efac;
-        }
+        /* 미작동 카드 */
+        .game-card.inactive { opacity: 0.78; }
+        .game-card.inactive .thumb-wrapper > .layer { filter: grayscale(45%); }
 
-        /* 미작동/점검중(OFFLINE) 상태 스타일 */
-        .status-badge.offline {
-            background: rgba(120, 53, 15, 0.85);
-            border: 1px solid rgba(245, 158, 11, 0.4);
-            color: #fcd34d;
-        }
-
-        /* 작동 안 되는 게임 카드 전용 스타일 (클릭 방지 처리 선택 가능) */
-        .game-card.inactive {
-            opacity: 0.78;
-        }
-
-        .game-card.inactive .thumb-fallback {
-            filter: grayscale(40%);
-        }
-
-        /* 하단 텍스트 영역 */
-        .card-body {
-            padding: 22px;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-
-        .game-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #f8fafc;
-        }
-
-        .game-desc {
-            font-size: 0.9rem;
-            color: var(--text-sub);
-            line-height: 1.5;
-            margin-bottom: 20px;
-            flex-grow: 1;
-        }
-
+        /* 본문 */
+        .card-body { padding: 20px 22px 22px; display: flex; flex-direction: column; flex-grow: 1; }
+        .title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+        .game-title { font-size: 1.25rem; font-weight: 700; color: #f8fafc; }
+        .game-version { font-size: 0.78rem; font-weight: 600; color: var(--text-sub); white-space: nowrap; }
+        .game-desc { font-size: 0.9rem; color: var(--text-sub); line-height: 1.55; margin-bottom: 20px; flex-grow: 1; }
         .card-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #818cf8;
-            padding-top: 12px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.85rem; font-weight: 600; color: #818cf8;
+            padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
+        .game-card.inactive .card-footer { color: #94a3b8; }
 
-        .game-card.inactive .card-footer {
-            color: #94a3b8;
-        }
-
-        /* 새 게임 슬롯 (Coming Soon) */
-        .game-card.coming-soon {
-            border-style: dashed;
-            background: rgba(15, 23, 42, 0.4);
-            cursor: default;
-        }
-        .game-card.coming-soon:hover {
-            transform: none;
-            border-color: var(--card-border);
-            box-shadow: none;
-        }
+        /* 새 게임 슬롯 */
+        .game-card.coming-soon { border-style: dashed; background: rgba(15, 23, 42, 0.4); cursor: default; }
+        .game-card.coming-soon:hover { transform: none; border-color: var(--card-border); box-shadow: none; }
 
         @media (max-width: 600px) {
             h1 { font-size: 2rem; }
             .game-grid { grid-template-columns: 1fr; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .game-card, .thumb-img, .preview-video { transition: none; }
+            .game-card:hover { transform: none; }
         }
     </style>
 </head>
@@ -282,186 +202,252 @@
             </div>
             <!-- [수정 포인트 2] 메인 타이틀 및 설명 -->
             <h1>My Game Collection</h1>
-            <p class="subtitle">카드에 마우스를 올리면 플레이 미리보기가 재생됩니다</p>
+            <p class="subtitle" id="subtitle">카드에 마우스를 올리면 플레이 미리보기가 재생됩니다</p>
         </header>
 
-        <div class="game-grid">
-
-            <!-- ========================================================================= -->
-            <!-- [게임 1: 연산RPG] (정상 작동 상태로 표시된 예시) -->
-            <!-- 
-                 1. href="mathrpg.html" : 이동할 게임 파일 주소
-                 2. poster="썸네일경로.png" : 마우스 올리기 전 보여줄 정지 이미지 (없으면 비워두세요)
-                 3. src="영상경로.mp4" : 마우스 올렸을 때 재생할 짧은 mp4 파일 경로
-            -->
-            <a href="mathrpg.html" class="game-card">
-                <div class="thumb-wrapper">
-                    <!-- 작동 상태 표시: 정상 작동 시 class="status-badge live" -->
-                    <span class="status-badge live">● PLAYABLE</span>
-                    <!-- 장르 표시 -->
-                    <span class="genre-tag">TURN-BASED RPG</span>
-
-                    <!-- 이미지/영상이 아직 없을 때 대신 보여줄 중앙 아이콘 -->
-                    <div class="thumb-fallback">⚔️</div>
-
-                    <!-- [비디오 태그] 영상 파일이 준비되면 class에 "has-video"를 유지하고, src에 파일명을 적으세요 -->
-                    <video class="preview-video has-video" muted loop playsinline preload="metadata" poster="assets/mathrpg-thumb.png">
-                        <source src="assets/mathrpg-preview.mp4" type="video/mp4">
-                    </video>
-                </div>
-
-                <div class="card-body">
-                    <div class="game-title">연산RPG</div>
-                    <div class="game-desc">빠른 사칙연산으로 몬스터와 대결하는 두뇌 회전 턴제 배틀 게임!</div>
-                    <div class="card-footer">
-                        <span>Game Start</span>
-                        <span>&rarr;</span>
-                    </div>
-                </div>
-            </a>
-            <!-- ========================================================================= -->
-
-
-            <!-- ========================================================================= -->
-            <!-- [게임 2: 보물찾기 게임] (정상 작동 상태로 표시된 예시) -->
-            <a href="TreasureIsland.html" class="game-card">
-                <div class="thumb-wrapper">
-                    <span class="status-badge live">● PLAYABLE</span>
-                    <span class="genre-tag">ADVENTURE</span>
-
-                    <div class="thumb-fallback">🏴‍☠️</div>
-
-                    <video class="preview-video has-video" muted loop playsinline preload="metadata" poster="assets/treasure-thumb.png">
-                        <source src="assets/treasure-preview.mp4" type="video/mp4">
-                    </video>
-                </div>
-
-                <div class="card-body">
-                    <div class="game-title">보물찾기 게임</div>
-                    <div class="game-desc">보물섬의 숨겨진 타일을 파내어 해적왕의 보물을 발굴하세요.</div>
-                    <div class="card-footer">
-                        <span>Game Start</span>
-                        <span>&rarr;</span>
-                    </div>
-                </div>
-            </a>
-            <!-- ========================================================================= -->
-
-
-            <!-- ========================================================================= -->
-            <!-- [게임 3: 아케이드 게임] (미작동/점검 중 상태로 표시한 예시) -->
-            <!-- 
-                 작동 안 되는 게임으로 표시하는 방법:
-                 1. <a ... class="game-card inactive"> 처럼 inactive 클래스를 붙여줍니다.
-                 2. 상태 뱃지를 <span class="status-badge offline">⚠️ 점검 중 (파일 준비중)</span> 으로 적습니다.
-            -->
-            <a href="arcade.html" class="game-card inactive">
-                <div class="thumb-wrapper">
-                    <!-- 미작동 표시 뱃지 -->
-                    <span class="status-badge offline">⚠️ 미작동 (점검 중)</span>
-                    <span class="genre-tag">ARCADE</span>
-
-                    <div class="thumb-fallback">🕹️</div>
-
-                    <!-- 영상이 없으면 class에서 has-video를 빼두시면 이모지만 깔끔하게 나옵니다 -->
-                    <video class="preview-video" muted loop playsinline preload="none">
-                        <source src="" type="video/mp4">
-                    </video>
-                </div>
-
-                <div class="card-body">
-                    <div class="game-title">아케이드 게임</div>
-                    <div class="game-desc">클래식한 아케이드 스타일 미니게임 (현재 리뉴얼 및 파일 연결 대기 중)</div>
-                    <div class="card-footer">
-                        <span>접속 불가 (점검 중)</span>
-                        <span>🔒</span>
-                    </div>
-                </div>
-            </a>
-            <!-- ========================================================================= -->
-
-
-            <!-- ========================================================================= -->
-            <!-- [게임 4: RPG 게임] (미작동/점검 중 상태로 표시한 예시) -->
-            <a href="rpg.html" class="game-card inactive">
-                <div class="thumb-wrapper">
-                    <span class="status-badge offline">⚠️ 미작동 (점검 중)</span>
-                    <span class="genre-tag">RPG</span>
-
-                    <div class="thumb-fallback">🗡️</div>
-
-                    <video class="preview-video" muted loop playsinline preload="none">
-                        <source src="" type="video/mp4">
-                    </video>
-                </div>
-
-                <div class="card-body">
-                    <div class="game-title">RPG 게임</div>
-                    <div class="game-desc">캐릭터를 키우며 모험을 떠나는 RPG (현재 빌드 업데이트 준비 중)</div>
-                    <div class="card-footer">
-                        <span>접속 불가 (점검 중)</span>
-                        <span>🔒</span>
-                    </div>
-                </div>
-            </a>
-            <!-- ========================================================================= -->
-
-
-            <!-- ========================================================================= -->
-            <!-- [새 게임 추가 슬롯] -->
-            <div class="game-card coming-soon">
-                <div class="thumb-wrapper">
-                    <span class="genre-tag">COMING SOON</span>
-                    <div class="thumb-fallback">➕</div>
-                </div>
-                <div class="card-body">
-                    <div class="game-title">새 프로젝트</div>
-                    <div class="game-desc">새로운 웹 게임 프로토타입이 이곳에 추가될 예정입니다.</div>
-                    <div class="card-footer">
-                        <span>Preparing...</span>
-                        <span>⏳</span>
-                    </div>
-                </div>
-            </div>
-            <!-- ========================================================================= -->
-
-        </div>
+        <div class="game-grid" id="gameGrid"></div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- [자동 제어 스크립트] 
-         1) 마우스를 올리면 MP4 재생 / 떼면 정지 및 처음으로 되감기
-         2) 만약 실제 HTML 게임 파일이 없어서 링크가 깨져 있거나 미작동(inactive) 상태일 때 안내창 띄우기
-    -->
     <script>
-        document.querySelectorAll('.game-card').forEach(card => {
-            const video = card.querySelector('.preview-video');
+    /* =========================================================================
+       [게임 목록] — 새 게임은 여기에 { ... } 블록 하나만 추가하면 됩니다.
+       위에 있을수록 앞에 표시돼요.
 
-            // 마우스를 카드에 올렸을 때 비디오 재생
-            card.addEventListener('mouseenter', () => {
-                if (video && video.classList.contains('has-video')) {
-                    video.play().catch(() => {
-                        // 영상 파일이 아직 폴더에 없더라도 에러 없이 기본 아이콘을 유지합니다.
-                    });
+       항목 설명
+         title    : 게임 이름
+         file     : 게임 HTML 파일 경로 (예: "otter.html")
+         genre    : 오른쪽 위 장르 뱃지
+         desc     : 한 줄 소개
+         status   : "new"(신작) / "live"(플레이 가능) / "offline"(점검 중)
+         version  : 버전 표시 (선택, 예: "v0.5")
+         thumb    : 썸네일 이미지 경로 (선택)
+         video    : 마우스 올렸을 때 재생할 mp4 경로 (선택)
+         emoji    : 썸네일이 없을 때 대체 커버에 쓸 이모지 (선택)
+         cover    : 대체 커버 배경색 (선택, CSS 그라디언트)
+
+       썸네일·영상이 없으면?
+         플레이 가능한 게임은 실제 게임 화면을 축소해서 자동으로 보여주고,
+         마우스를 올리면 그 화면이 그대로 움직이는 미리보기가 됩니다.
+         점검 중인 게임은 이모지 + 제목으로 된 커버를 보여줍니다.
+       ========================================================================= */
+    const GAMES = [
+        {
+            title: "튕겨라 수달!",
+            file: "otter.html",
+            genre: "PINBALL ROGUELIKE",
+            desc: "조약돌을 튕겨 코어를 부수는 수달의 모험. 블록을 맞혀 데미지를 모으고, 빨간 코어를 전부 깨면 확정 처치!",
+            status: "new",
+            version: "v0.5",
+            thumb: "assets/otter-thumb.jpg",
+            video: "assets/otter-preview.mp4",
+        },
+        {
+            title: "연산RPG",
+            file: "mathrpg.html",
+            genre: "TURN-BASED RPG",
+            desc: "빠른 사칙연산으로 몬스터와 대결하는 두뇌 회전 턴제 배틀 게임!",
+            status: "live",
+            emoji: "⚔️",
+            cover: "linear-gradient(135deg, #3b1d6e 0%, #1e1b4b 100%)",
+        },
+        {
+            title: "보물찾기 게임",
+            file: "TreasureIsland.html",
+            genre: "ADVENTURE",
+            desc: "보물섬의 숨겨진 타일을 파내어 해적왕의 보물을 발굴하세요.",
+            status: "live",
+            emoji: "🏴‍☠️",
+            cover: "linear-gradient(135deg, #0e4a5c 0%, #102a43 100%)",
+        },
+        {
+            title: "아케이드 게임",
+            file: "arcade.html",
+            genre: "ARCADE",
+            desc: "클래식한 아케이드 스타일 미니게임 (현재 리뉴얼 및 파일 연결 대기 중)",
+            status: "offline",
+            emoji: "🕹️",
+            cover: "linear-gradient(135deg, #4a1d3a 0%, #1f1630 100%)",
+        },
+        {
+            title: "RPG 게임",
+            file: "rpg.html",
+            genre: "RPG",
+            desc: "캐릭터를 키우며 모험을 떠나는 RPG (현재 빌드 업데이트 준비 중)",
+            status: "offline",
+            emoji: "🗡️",
+            cover: "linear-gradient(135deg, #3d2f12 0%, #1c1917 100%)",
+        },
+    ];
+
+    /* 맨 끝 "새 프로젝트" 슬롯을 보여줄지 */
+    const SHOW_COMING_SOON = true;
+    /* ========================================================================= */
+
+
+    const STATUS = {
+        new:     { cls: "new",     label: "✦ NEW" },
+        live:    { cls: "live",    label: "● PLAYABLE" },
+        offline: { cls: "offline", label: "⚠️ 점검 중" },
+    };
+    const canHover = window.matchMedia("(hover: hover)").matches;
+    const grid = document.getElementById("gameGrid");
+
+    if (!canHover) {
+        document.getElementById("subtitle").textContent = "화면에 보이는 게임의 플레이 미리보기가 자동 재생됩니다";
+    }
+
+    function esc(s) {
+        return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function coverHTML(g) {
+        const style = g.cover ? ` style="--cover:${esc(g.cover)}"` : "";
+        return `<div class="layer thumb-cover"${style}>
+                    <div class="cover-emoji">${esc(g.emoji || "🎮")}</div>
+                    <div class="cover-title">${esc(g.title)}</div>
+                </div>`;
+    }
+
+    function cardHTML(g) {
+        const st = STATUS[g.status] || STATUS.live;
+        const playable = g.status !== "offline";
+        return `
+            <div class="thumb-wrapper">
+                <span class="status-badge ${st.cls}">${st.label}</span>
+                <span class="genre-tag">${esc(g.genre)}</span>
+                ${coverHTML(g)}
+                ${g.thumb ? `<img class="layer thumb-img" src="${esc(g.thumb)}" alt="${esc(g.title)} 게임 화면" loading="lazy" decoding="async">` : ""}
+                ${g.video ? `<video class="layer preview-video" muted loop playsinline preload="none" src="${esc(g.video)}"></video>` : ""}
+                ${playable ? `<span class="preview-hint">▶ 미리보기</span>` : ""}
+            </div>
+            <div class="card-body">
+                <div class="title-row">
+                    <div class="game-title">${esc(g.title)}</div>
+                    ${g.version ? `<div class="game-version">${esc(g.version)}</div>` : ""}
+                </div>
+                <div class="game-desc">${esc(g.desc)}</div>
+                <div class="card-footer">
+                    ${playable ? `<span>Game Start</span><span>&rarr;</span>` : `<span>접속 불가 (점검 중)</span><span>🔒</span>`}
+                </div>
+            </div>`;
+    }
+
+    /* 실제 게임을 960×600 크기로 띄운 뒤 카드 크기에 맞게 축소 */
+    function fitLive(wrap) {
+        const frame = wrap.querySelector(".thumb-live iframe");
+        if (frame) frame.style.transform = `scale(${wrap.clientWidth / 960})`;
+    }
+
+    async function mountLive(card, g) {
+        const wrap = card.querySelector(".thumb-wrapper");
+        if (wrap.querySelector(".thumb-live")) return;
+        // 게임 파일이 실제로 있는지 먼저 확인 (없으면 대체 커버 유지)
+        try {
+            const res = await fetch(g.file, { method: "HEAD", cache: "no-store" });
+            if (!res.ok) return;
+        } catch (e) { /* 파일을 직접 열어 본 경우(file://) 등은 그냥 시도 */ }
+        const box = document.createElement("div");
+        box.className = "layer thumb-live";
+        const frame = document.createElement("iframe");
+        frame.src = g.file;
+        frame.title = `${g.title} 미리보기`;
+        frame.tabIndex = -1;
+        frame.setAttribute("aria-hidden", "true");
+        frame.setAttribute("sandbox", "allow-scripts allow-same-origin"); // 미리보기에서는 팝업·알림창 차단
+        frame.setAttribute("loading", "lazy");
+        box.appendChild(frame);
+        box.style.opacity = "0";
+        box.style.transition = "opacity .4s ease";
+        frame.addEventListener("load", () => { box.style.opacity = "1"; });
+        // 뱃지보다 아래, 커버보다 위에 깔기
+        wrap.insertBefore(box, wrap.querySelector(".preview-hint") || null);
+        fitLive(wrap);
+    }
+
+    const videoCards = [];
+
+    GAMES.forEach(g => {
+        const playable = g.status !== "offline";
+        const card = document.createElement(playable ? "a" : "div");
+        card.className = "game-card" + (playable ? "" : " inactive");
+        if (playable) card.href = g.file;
+        else { card.tabIndex = 0; card.setAttribute("role", "link"); card.setAttribute("aria-disabled", "true"); }
+        card.innerHTML = cardHTML(g);
+        grid.appendChild(card);
+
+        const img = card.querySelector(".thumb-img");
+        const video = card.querySelector(".preview-video");
+
+        // 썸네일 파일이 없으면 → 실제 게임 화면(라이브 썸네일)로 대체
+        if (img) img.addEventListener("error", () => { img.remove(); if (playable) mountLive(card, g); });
+        else if (playable) mountLive(card, g);
+
+        // 영상 파일이 없으면 조용히 빼기
+        if (video) {
+            video.addEventListener("error", () => { video.remove(); card.classList.remove("playing"); });
+            videoCards.push(card);
+        }
+
+        if (playable && canHover) {
+            card.addEventListener("mouseenter", () => {
+                const v = card.querySelector(".preview-video");
+                if (v) {
+                    if (v.preload === "none") { v.preload = "auto"; v.load(); }
+                    v.play().then(() => card.classList.add("playing")).catch(() => {});
                 }
             });
+            card.addEventListener("mouseleave", () => {
+                const v = card.querySelector(".preview-video");
+                card.classList.remove("playing");
+                if (v) { v.pause(); v.currentTime = 0; }
+            });
+        }
 
-            // 마우스를 카드에서 뗐을 때 비디오 일시정지 & 0초로 초기화
-            card.addEventListener('mouseleave', () => {
-                if (video && video.classList.contains('has-video')) {
-                    video.pause();
-                    video.currentTime = 0;
+        if (!playable) {
+            const notice = (e) => { e.preventDefault(); alert("현재 이 게임은 점검 중이거나 파일이 연결되지 않았습니다."); };
+            card.addEventListener("click", notice);
+            card.addEventListener("keydown", e => { if (e.key === "Enter") notice(e); });
+        }
+    });
+
+    if (SHOW_COMING_SOON) {
+        const slot = document.createElement("div");
+        slot.className = "game-card coming-soon";
+        slot.innerHTML = `
+            <div class="thumb-wrapper">
+                <span class="genre-tag">COMING SOON</span>
+                <div class="layer thumb-cover"><div class="cover-emoji">➕</div></div>
+            </div>
+            <div class="card-body">
+                <div class="title-row"><div class="game-title">새 프로젝트</div></div>
+                <div class="game-desc">새로운 웹 게임 프로토타입이 이곳에 추가될 예정입니다.</div>
+                <div class="card-footer"><span>Preparing...</span><span>⏳</span></div>
+            </div>`;
+        grid.appendChild(slot);
+    }
+
+    // 창 크기가 바뀌면 라이브 썸네일 크기 다시 맞추기
+    if ("ResizeObserver" in window) {
+        const ro = new ResizeObserver(entries => entries.forEach(e => fitLive(e.target)));
+        document.querySelectorAll(".thumb-wrapper").forEach(w => ro.observe(w));
+    }
+
+    // 휴대폰처럼 마우스가 없는 기기: 화면 가운데에 들어온 카드의 영상을 자동 재생
+    if (!canHover && "IntersectionObserver" in window) {
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(({ target: card, isIntersecting }) => {
+                const v = card.querySelector(".preview-video");
+                if (!v) return;
+                if (isIntersecting) {
+                    if (v.preload === "none") { v.preload = "auto"; v.load(); }
+                    v.play().then(() => card.classList.add("playing")).catch(() => {});
+                } else {
+                    card.classList.remove("playing"); v.pause();
                 }
             });
-
-            // 'inactive(미작동)' 클래스가 붙은 카드를 클릭하면 404 에러 페이지 대신 안내 메시지 표시
-            card.addEventListener('click', (e) => {
-                if (card.classList.contains('inactive')) {
-                    e.preventDefault(); // 페이지 이동 막기
-                    alert('현재 이 게임은 점검 중이거나 파일이 연결되지 않았습니다.');
-                }
-            });
-        });
+        }, { threshold: 0.75 });
+        videoCards.forEach(c => io.observe(c));
+    }
     </script>
 </body>
 </html>
