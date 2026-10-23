@@ -1,1634 +1,1802 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>연산RPG</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .container {
-            width: 800px;
-            height: 600px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-            position: relative;
-        }
-
-        .screen {
-            width: 100%;
-            height: 100%;
-            display: none;
-            padding: 40px;
-            position: relative;
-        }
-
-        .screen.active {
-            display: block !important;
-        }
-
-        .screen:not(.active) {
-            display: none !important;
-        }
-
-        /* 타이틀 화면 */
-        .title-screen {
-            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
-            color: white;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .title-screen:not(.active) {
-            display: none !important;
-        }
-
-        .title-screen h1 {
-            font-size: 4em;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .title-screen p {
-            font-size: 1.2em;
-            margin-bottom: 40px;
-            opacity: 0.9;
-        }
-
-        .btn {
-            padding: 15px 30px;
-            font-size: 1.1em;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 10px;
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-
-        .btn-primary {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #2196F3;
-            color: white;
-        }
-
-        /* 스테이지 선택 화면 */
-        .stage-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
-            margin-top: 30px;
-        }
-
-        .stage-card {
-            background: linear-gradient(45deg, #FFE0B2, #FFCC02);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 3px solid transparent;
-        }
-
-        .stage-card:hover {
-            transform: scale(1.05);
-            border-color: #FF9800;
-        }
-
-        .stage-card.locked {
-            background: #E0E0E0;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .stage-card h3 {
-            font-size: 1.5em;
-            margin-bottom: 10px;
-            color: #E65100;
-        }
-
-        .stage-card p {
-            font-size: 0.9em;
-            color: #BF360C;
-        }
-
-        /* 전투 준비 화면 */
-        .battle-prep {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .battle-prep-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex: 1;
-        }
-
-        .monster-info, .player-info {
-            width: 45%;
-            text-align: center;
-        }
-
-        .monster {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            margin: 20px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 60px;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .vs {
-            font-size: 3em;
-            font-weight: bold;
-            color: #FF5722;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        /* 전투 화면 새로운 레이아웃 */
-        .battle-screen {
-            padding: 15px;
-            display: grid;
-            grid-template-rows: auto auto 1fr auto auto;
-            gap: 20px;
-            height: calc(100% - 30px);
-        }
-
-        /* 상단 정보 영역 */
-        .battle-top {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 20px;
-            align-items: start;
-        }
-
-        .player-stats, .monster-stats {
-            background: #F8F9FA;
-            padding: 15px;
-            border-radius: 12px;
-            border: 2px solid #DEE2E6;
-        }
-
-        .player-stats h3, .monster-stats h3 {
-            margin: 0 0 8px 0;
-            font-size: 1.1em;
-            color: #495057;
-        }
-
-        .stats-row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #6C757D;
-        }
-
-        .health-bar {
-            width: 100%;
-            height: 25px;
-            background: #E9ECEF;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-            border: 2px solid #ADB5BD;
-        }
-
-        .health-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #28A745, #20C997);
-            transition: width 0.5s ease;
-            position: relative;
-        }
-
-        .health-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-weight: bold;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-            font-size: 0.9em;
-        }
-
-        .game-info {
-            text-align: center;
-            background: #E3F2FD;
-            padding: 15px;
-            border-radius: 12px;
-            border: 2px solid #BBDEFB;
-        }
-
-        .stage-info {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #1976D2;
-            margin-bottom: 5px;
-        }
-
-        .turn-info {
-            font-size: 1em;
-            color: #424242;
-            margin-bottom: 8px;
-        }
-
-        .timer-display {
-            font-size: 2em;
-            font-weight: bold;
-            color: #D32F2F;
-            background: rgba(211, 47, 47, 0.1);
-            padding: 8px 16px;
-            border-radius: 8px;
-            display: inline-block;
-        }
-
-        /* 캐릭터 영역 */
-        .character-area {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            background: linear-gradient(135deg, #E8F5E8, #F3E5F5);
-            border-radius: 15px;
-            border: 2px solid #C8E6C9;
-        }
-
-        .player-character, .monster-character {
-            text-align: center;
-            flex: 1;
-        }
-
-        .character-sprite {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4.5em;
-            margin: 0 auto 15px;
-            border: 4px solid #FFF;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-        }
-
-        .player-sprite {
-            background: linear-gradient(45deg, #2196F3, #21CBF3);
-        }
-
-        .monster-sprite {
-            background: linear-gradient(45deg, #FF5722, #FF8A65);
-        }
-
-        .character-name {
-            font-weight: bold;
-            color: #333;
-            font-size: 1.1em;
-        }
-
-        .vs-text {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #FF5722;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            margin: 0 20px;
-        }
-
-        /* 문제 영역 */
-        .problem-area {
-            background: #FFFFFF;
-            border: 3px solid #007BFF;
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .problem-text {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #212529;
-            min-height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            word-break: break-all;
-        }
-
-        /* 입력 영역 */
-        .input-area {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .answer-input {
-            font-size: 2.2em;
-            padding: 15px 25px;
-            border: 3px solid #28A745;
-            border-radius: 12px;
-            text-align: center;
-            width: 250px;
-            outline: none;
-            background: #FFFFFF;
-            color: #212529;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .answer-input:focus {
-            border-color: #FF6B35;
-            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
-        }
-
-        .submit-btn {
-            font-size: 1.4em;
-            padding: 18px 35px;
-            background: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.2s;
-            min-width: 120px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .submit-btn:hover {
-            background: #0056B3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        }
-
-        .submit-btn:active {
-            transform: translateY(0);
-            background: #004085;
-        }
-
-        /* 턴 전환 오버레이 */
-        .turn-change-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1500;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .turn-change-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .turn-change-text {
-            font-size: 3em;
-            font-weight: bold;
-            color: #FF5722;
-            background: white;
-            padding: 30px 50px;
-            border-radius: 20px;
-            border: 4px solid #FF5722;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            animation: pulse 0.6s ease-in-out;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.8); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        /* 피드백 오버레이 */
-        .feedback-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: 2000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
-
-        .feedback-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .feedback-overlay::before {
-            content: attr(data-text);
-            font-size: 3em;
-            font-weight: bold;
-            padding: 30px 50px;
-            background: white;
-            border-radius: 20px;
-            border: 4px solid;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .feedback-overlay.correct::before {
-            color: #28A745;
-            border-color: #28A745;
-        }
-
-        .feedback-overlay.incorrect::before {
-            color: #DC3545;
-            border-color: #DC3545;
-        }
-
-        /* 승리 연출 오버레이 */
-        .victory-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(255, 215, 0, 0.9), rgba(255, 165, 0, 0.9));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2500;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.5s ease;
-        }
-
-        .victory-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .victory-content {
-            text-align: center;
-            animation: victoryBounce 1s ease-in-out;
-        }
-
-        .victory-text {
-            font-size: 4em;
-            font-weight: bold;
-            color: #FFF;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-        }
-
-        .victory-subtext {
-            font-size: 2em;
-            color: #FFF;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        @keyframes victoryBounce {
-            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
-            50% { transform: scale(1.1) rotate(5deg); opacity: 1; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-
-        /* 전투 결과 화면 */
-        .result-screen {
-            text-align: center;
-        }
-
-        .benefit-selection {
-            margin: 30px 0;
-        }
-
-        .benefit-options {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-        }
-
-        .benefit-card {
-            background: linear-gradient(45deg, #9C27B0, #E91E63);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s;
-            width: 200px;
-        }
-
-        .benefit-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-        }
-
-        /* 애니메이션 */
-        @keyframes damage {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); color: red; }
-            100% { transform: scale(1); }
-        }
-
-        @keyframes critical {
-            0% { transform: scale(1) rotate(0deg); }
-            25% { transform: scale(1.2) rotate(-5deg); }
-            75% { transform: scale(1.2) rotate(5deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
-
-        .damage-animation {
-            animation: damage 0.5s;
-        }
-
-        .critical-animation {
-            animation: critical 0.8s;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1033">
+<title>연산RPG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --ink: #3b2410;
+        --cream: #fff8e7;
+        --paper: #fde9b8;
+        --rim: #7a4a1e;
+        --gold: #f5c542;
+        --red: #ef4444;
+        --green: #22c55e;
+        --blue: #3b82f6;
+        --rare: #3b82f6;
+        --legend: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+        font-family: "Jua", "Pretendard", system-ui, sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 20% 10%, #3b2a6b 0, transparent 50%),
+                    radial-gradient(circle at 80% 90%, #4a1d5c 0, transparent 50%), #1b1033;
+        display: flex; align-items: center; justify-content: center;
+        overflow: hidden;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none; -webkit-user-select: none;
+    }
+    button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+
+    /* 게임 화면 (세로 스마트폰 기준) */
+    #app {
+        position: relative;
+        width: min(100vw, 480px);
+        height: 100vh; height: 100dvh;
+        max-height: 960px;
+        overflow: hidden;
+        background: var(--paper);
+    }
+    @media (min-width: 520px) and (min-height: 720px) {
+        #app {
+            height: min(calc(100dvh - 40px), 900px);
+            border-radius: 30px;
+            box-shadow: 0 0 0 6px var(--rim), 0 0 0 10px #f5c542, 0 30px 80px rgba(0, 0, 0, .6);
+        }
+    }
+    .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+    .screen.on { display: flex; }
+
+    /* 공통 버튼 */
+    .btn {
+        --bg: var(--green); --sh: #15803d;
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        padding: 14px 22px; border-radius: 20px;
+        font-size: 24px; color: #fff;
+        background: var(--bg);
+        box-shadow: 0 6px 0 var(--sh), 0 12px 20px rgba(0, 0, 0, .22);
+        text-shadow: 0 2px 0 rgba(0, 0, 0, .18);
+        transition: transform .08s, box-shadow .08s, filter .15s;
+    }
+    .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--sh), 0 4px 8px rgba(0, 0, 0, .2); }
+    .btn:disabled { filter: grayscale(1) opacity(.55); pointer-events: none; }
+    .btn.pink { --bg: #f43f5e; --sh: #be123c; }
+    .btn.blue { --bg: var(--blue); --sh: #1d4ed8; }
+    .btn.gold { --bg: #f59e0b; --sh: #b45309; }
+    .btn.gray { --bg: #a8a29e; --sh: #78716c; }
+    .btn.big { font-size: 30px; padding: 18px 26px; border-radius: 24px; }
+    .icon-btn {
+        width: 46px; height: 46px; border-radius: 15px; flex: none;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 22px;
+        background: rgba(255, 248, 231, .92);
+        border: 3px solid var(--rim);
+        box-shadow: 0 4px 0 var(--rim);
+    }
+    .icon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--rim); }
+    .panel {
+        background: var(--cream);
+        border: 4px solid var(--rim);
+        border-radius: 24px;
+        box-shadow: 0 6px 0 var(--rim), 0 16px 30px rgba(0, 0, 0, .25);
+    }
+    .chip {
+        display: inline-flex; align-items: center; gap: 4px;
+        background: #fff; border: 2px solid #e7d3a7; border-radius: 999px;
+        padding: 4px 10px; font-size: 16px; white-space: nowrap;
+    }
+    .coin-pill {
+        display: inline-flex; align-items: center; gap: 4px;
+        background: #fff8e7; border: 3px solid var(--rim); border-radius: 999px;
+        padding: 4px 12px; font-size: 19px; box-shadow: 0 3px 0 var(--rim);
+    }
+    .head-title {
+        flex: 1; text-align: center; font-size: 28px; color: #fff; font-weight: 400;
+        text-shadow: 0 3px 0 var(--rim), 2px 0 0 var(--rim), -2px 0 0 var(--rim), 0 -2px 0 var(--rim);
+    }
+
+    /* ===== 배경 장면 ===== */
+    .sky {
+        position: absolute; inset: 0; overflow: hidden;
+        background: linear-gradient(var(--s1), var(--s2));
+    }
+    .sky.night::before {
+        content: ""; position: absolute; inset: 0 0 40% 0;
+        background-image:
+            radial-gradient(2px 2px at 12% 18%, #fff 50%, transparent 51%),
+            radial-gradient(2px 2px at 30% 40%, #fff 50%, transparent 51%),
+            radial-gradient(1.5px 1.5px at 48% 12%, #fff 50%, transparent 51%),
+            radial-gradient(2px 2px at 66% 32%, #fff 50%, transparent 51%),
+            radial-gradient(1.5px 1.5px at 84% 14%, #fff 50%, transparent 51%),
+            radial-gradient(2px 2px at 90% 44%, #fff 50%, transparent 51%),
+            radial-gradient(1.5px 1.5px at 6% 52%, #fff 50%, transparent 51%);
+        opacity: .8; animation: twinkle 3s ease-in-out infinite alternate;
+    }
+    @keyframes twinkle { to { opacity: .35; } }
+    .orb { position: absolute; top: 9%; right: 10%; width: 52px; height: 52px; border-radius: 50%; }
+    .orb.sun { background: #fde68a; box-shadow: 0 0 0 10px rgba(253, 230, 138, .35), 0 0 50px #fde68a; }
+    .orb.moon { background: #f8fafc; box-shadow: inset -10px -4px 0 #cbd5e1, 0 0 36px rgba(255, 255, 255, .55); }
+    .cloud {
+        position: absolute; width: 90px; height: 26px; border-radius: 20px;
+        background: rgba(255, 255, 255, .9);
+        animation: drift 26s linear infinite;
+    }
+    .cloud::before, .cloud::after { content: ""; position: absolute; background: inherit; border-radius: 50%; }
+    .cloud::before { width: 40px; height: 40px; left: 14px; top: -20px; }
+    .cloud::after { width: 30px; height: 30px; left: 44px; top: -13px; }
+    .cloud.c1 { top: 16%; left: -100px; }
+    .cloud.c2 { top: 30%; left: -100px; transform: scale(.7); animation-duration: 38s; animation-delay: -18s; }
+    .sky.night .cloud { opacity: .25; }
+    @keyframes drift { to { left: 110%; } }
+    .hill { position: absolute; bottom: 20%; border-radius: 50% 50% 0 0; background: var(--g); }
+    .hill.h1 { left: -20%; width: 85%; height: 38%; filter: brightness(1.3); opacity: .75; }
+    .hill.h2 { right: -25%; width: 80%; height: 30%; filter: brightness(1.15); }
+    .ground {
+        position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
+        background: var(--g);
+        box-shadow: inset 0 7px 0 rgba(255, 255, 255, .22);
+    }
+    .actor { position: absolute; bottom: 9%; width: min(38%, 168px); aspect-ratio: 1; z-index: 2; }
+    .actor .bob { width: 100%; height: 100%; animation: bob 1.6s ease-in-out infinite; }
+    .actor svg { width: 100%; height: 100%; display: block; overflow: visible; }
+    .actor.monster .bob { animation-duration: 1.2s; }
+    @keyframes bob { 50% { transform: translateY(-6px) scaleY(1.02); } }
+
+    /* ===== 타이틀 ===== */
+    #scr-title .logo {
+        position: absolute; top: 7%; left: 0; right: 0; z-index: 3;
+        text-align: center; line-height: .95;
+        color: #fff;
+        text-shadow: 0 3px 0 var(--rim), 3px 0 0 var(--rim), -3px 0 0 var(--rim), 0 -3px 0 var(--rim),
+                     2px 2px 0 var(--rim), -2px 2px 0 var(--rim), 2px -2px 0 var(--rim), -2px -2px 0 var(--rim),
+                     0 9px 0 #b45309, 0 14px 24px rgba(0, 0, 0, .3);
+        animation: logoIn .8s cubic-bezier(.2, 1.6, .4, 1) both;
+    }
+    .logo .l1 { font-size: 72px; color: #fde047; }
+    .logo .l2 { font-size: 60px; letter-spacing: 2px; }
+    @keyframes logoIn { from { transform: scale(.4) rotate(-6deg); opacity: 0; } }
+    #scr-title .actor.hero { left: 6%; bottom: 46%; width: min(32%, 140px); }
+    #scr-title .actor.monster { right: 8%; bottom: 46%; width: min(26%, 112px); }
+    #scr-title .menu {
+        position: absolute; left: 14px; right: 14px; bottom: max(18px, env(safe-area-inset-bottom));
+        z-index: 3; padding: 16px 16px 16px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .menu .row { display: flex; gap: 8px; align-items: center; }
+    .menu .row .btn { flex: 1; font-size: 21px; padding: 12px; }
+    .grade-chip {
+        flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 6px;
+        background: #fff; border: 3px solid #e7d3a7; border-radius: 16px; padding: 8px 12px; font-size: 18px;
+    }
+    .grade-chip small { color: #a16207; font-size: 14px; }
+    .record-line { text-align: center; font-size: 16px; color: #92400e; }
+    .cycle-pick { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 19px; }
+    .cycle-pick button { width: 34px; height: 34px; border-radius: 10px; background: #fff; border: 2px solid #e7d3a7; font-size: 16px; }
+    .cycle-pick button:disabled { opacity: .3; }
+    .cycle-pick[hidden] { display: none; }
+    .top-right { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 5; }
+
+    /* ===== 학년 선택 ===== */
+    #scr-grade { background: linear-gradient(#7dd3fc, #fde9b8 55%); }
+    #scr-grade .wrap { flex: 1; overflow-y: auto; padding: max(28px, env(safe-area-inset-top)) 18px 24px; text-align: center; }
+    #scr-grade h2 { font-size: 34px; font-weight: 400; color: #fff; text-shadow: 0 3px 0 var(--rim), 2px 0 0 var(--rim), -2px 0 0 var(--rim), 0 -2px 0 var(--rim); }
+    #scr-grade p { margin: 8px 0 18px; font-size: 17px; color: #1e3a8a; }
+    .grades { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grades button {
+        background: var(--cream); border: 3px solid var(--rim); border-radius: 18px; box-shadow: 0 5px 0 var(--rim);
+        padding: 14px 8px; font-size: 22px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .grades button span { font-size: 30px; }
+    .grades button small { font-size: 13px; color: #92400e; }
+    .grades button.wide { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 10px; font-size: 19px; }
+    .grades button.wide span { font-size: 26px; }
+    .grades button.sel { background: #dcfce7; border-color: #16a34a; box-shadow: 0 5px 0 #16a34a; }
+    .grades button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--rim); }
+
+    /* ===== 상점 ===== */
+    #scr-shop { background: linear-gradient(#fbbf24, #fde9b8 40%); }
+    .shop-head { display: flex; align-items: center; gap: 10px; padding: max(14px, env(safe-area-inset-top)) 14px 12px; }
+    .shop-list { flex: 1; overflow-y: auto; padding: 4px 14px 24px; display: flex; flex-direction: column; gap: 10px; }
+    .shop-note { text-align: center; font-size: 16px; color: #92400e; margin-bottom: 2px; }
+    .item { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 20px; }
+    .item .ic { font-size: 34px; width: 44px; text-align: center; flex: none; }
+    .item .tx { flex: 1; min-width: 0; }
+    .item .tx b { display: block; font-weight: 400; font-size: 20px; }
+    .item .tx span { font-size: 15px; color: #92400e; }
+    .lv-dots { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; }
+    .lv-dots i { width: 9px; height: 9px; border-radius: 50%; background: #e7d3a7; }
+    .lv-dots i.on { background: var(--gold); box-shadow: 0 0 0 1.5px #b45309; }
+    .item .btn { font-size: 18px; padding: 10px 12px; border-radius: 14px; min-width: 88px; }
+
+    /* ===== 전투 ===== */
+    #scr-battle { background: var(--paper); }
+    .bar-top {
+        position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+        padding: max(10px, env(safe-area-inset-top)) 12px 0;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .bar-top .title {
+        flex: 1; text-align: center; font-size: 18px; color: #fff;
+        text-shadow: 0 2px 0 rgba(0, 0, 0, .45), 0 0 8px rgba(0, 0, 0, .35);
+    }
+    .bar-top .icon-btn { width: 40px; height: 40px; font-size: 19px; border-radius: 13px; }
+    .scene { position: relative; flex: 1 1 auto; min-height: 180px; overflow: hidden; }
+    .plates {
+        position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 48px); left: 10px; right: 10px; z-index: 4;
+        display: flex; justify-content: space-between; gap: 10px;
+    }
+    .plate {
+        flex: 1; max-width: 48%;
+        background: rgba(255, 248, 231, .94); border: 3px solid var(--rim); border-radius: 14px;
+        padding: 5px 8px 7px;
+    }
+    .plate .nm { display: flex; justify-content: space-between; align-items: center; font-size: 15px; gap: 4px; white-space: nowrap; }
+    .plate .nm small { font-size: 13px; color: #92400e; }
+    .hp { position: relative; height: 16px; margin-top: 3px; border-radius: 8px; background: #e7d3a7; overflow: hidden; border: 2px solid var(--rim); }
+    .hp i { position: absolute; inset: 0; width: 100%; border-radius: 5px; transition: width .45s ease; }
+    .hp i.ghost { background: #fca5a5; transition: width .9s ease .35s; }
+    .hp i.fill { background: linear-gradient(#4ade80, #16a34a); }
+    .plate.mon .hp i.fill { background: linear-gradient(#fb7185, #e11d48); }
+    .hp em { position: absolute; inset: 0; font-style: normal; font-size: 12px; line-height: 12px; text-align: center; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+    #scr-battle .actor.hero { left: 4%; }
+    #scr-battle .actor.monster { right: 4%; }
+    .buffs {
+        position: absolute; left: 10px; top: calc(max(10px, env(safe-area-inset-top)) + 104px); z-index: 4;
+        display: flex; gap: 4px; flex-wrap: wrap; max-width: 60%;
+    }
+    .buffs span { font-size: 13px; background: rgba(255, 255, 255, .92); border: 2px solid #e7d3a7; border-radius: 999px; padding: 1px 7px; }
+
+    .lunge-r { animation: lungeR .45s ease; }
+    .lunge-l { animation: lungeL .45s ease; }
+    @keyframes lungeR { 40% { transform: translateX(46%) rotate(6deg); } }
+    @keyframes lungeL { 40% { transform: translateX(-46%) rotate(-6deg); } }
+    .ouch { animation: ouch .45s ease; }
+    @keyframes ouch {
+        0%, 100% { filter: none; transform: none; }
+        20% { filter: brightness(2.2) saturate(0); transform: translateX(8px); }
+        40% { transform: translateX(-8px); }
+        60% { filter: brightness(1.6) sepia(1) hue-rotate(-40deg) saturate(4); transform: translateX(5px); }
+    }
+    .dead { animation: poof .8s ease forwards; }
+    @keyframes poof { 30% { transform: scale(1.15) rotate(-8deg); filter: brightness(2); } 100% { transform: scale(.2) rotate(30deg); opacity: 0; } }
+    .shake { animation: shake .4s ease; }
+    @keyframes shake { 20% { transform: translate(6px, -3px); } 40% { transform: translate(-6px, 3px); } 60% { transform: translate(4px, 2px); } 80% { transform: translate(-3px, -2px); } }
+    .slash {
+        position: absolute; z-index: 5; width: 130px; height: 130px; pointer-events: none;
+        border-radius: 50%; border-top: 9px solid #fff; border-right: 4px solid rgba(255, 255, 255, .5);
+        filter: drop-shadow(0 0 8px #fde047);
+        animation: slash .32s ease-out forwards;
+    }
+    .slash.crit { border-top-color: #fde047; width: 170px; height: 170px; }
+    @keyframes slash { from { transform: rotate(-80deg) scale(.6); opacity: 1; } to { transform: rotate(40deg) scale(1.1); opacity: 0; } }
+    .float {
+        position: absolute; z-index: 7; pointer-events: none; transform: translateX(-50%);
+        font-size: 38px; color: #fff; white-space: nowrap;
+        text-shadow: 0 3px 0 #b91c1c, 2px 0 0 #b91c1c, -2px 0 0 #b91c1c, 0 -2px 0 #b91c1c;
+        animation: floatUp .95s ease-out forwards;
+    }
+    .float.crit { font-size: 50px; color: #fde047; text-shadow: 0 3px 0 #b45309, 2px 0 0 #b45309, -2px 0 0 #b45309, 0 -2px 0 #b45309; }
+    .float.heal { color: #bbf7d0; text-shadow: 0 3px 0 #15803d, 2px 0 0 #15803d, -2px 0 0 #15803d, 0 -2px 0 #15803d; font-size: 28px; }
+    @keyframes floatUp { 0% { transform: translate(-50%, 10px) scale(.5); opacity: 0; } 20% { transform: translate(-50%, -10px) scale(1.15); opacity: 1; } 100% { transform: translate(-50%, -70px) scale(1); opacity: 0; } }
+    .spark { position: absolute; z-index: 6; width: 12px; height: 12px; border-radius: 50%; pointer-events: none; animation: spark .7s ease-out forwards; }
+    @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; } }
+    .banner {
+        position: absolute; left: 0; right: 0; top: 55%; z-index: 8; pointer-events: none;
+        text-align: center; font-size: clamp(26px, 8vw, 42px); color: #fff; white-space: nowrap;
+        transform: translateY(-50%); opacity: 0;
+    }
+    .banner span {
+        display: inline-block; padding: 8px 24px; border-radius: 20px;
+        background: var(--bb, #2563eb); border: 4px solid #fff;
+        box-shadow: 0 6px 0 rgba(0, 0, 0, .25);
+        text-shadow: 0 3px 0 rgba(0, 0, 0, .25);
+    }
+    .banner.show { animation: banner 1.1s ease forwards; }
+    @keyframes banner {
+        0% { opacity: 0; transform: translateY(-50%) scale(.3); }
+        18% { opacity: 1; transform: translateY(-50%) scale(1.12); }
+        28%, 78% { opacity: 1; transform: translateY(-50%) scale(1); }
+        100% { opacity: 0; transform: translateY(-50%) scale(1.3); }
+    }
+
+    .lower { position: relative; flex: 0 0 auto; display: flex; flex-direction: column; }
+    .quiz { margin: -16px 12px 0; position: relative; z-index: 5; padding: 10px 14px 10px; }
+    .qhead { display: flex; justify-content: space-between; align-items: center; font-size: 16px; margin-bottom: 5px; }
+    .qhead .optag { padding: 2px 10px; border-radius: 999px; color: #fff; background: var(--oc, #22c55e); font-size: 15px; }
+    .qhead .sec { color: #92400e; font-variant-numeric: tabular-nums; }
+    .timer { position: relative; height: 12px; border-radius: 6px; background: #f1e1bb; overflow: hidden; }
+    .timer i { position: absolute; inset: 0; width: 100%; background: linear-gradient(90deg, #22c55e, #84cc16); border-radius: 6px; }
+    .timer.low i { background: linear-gradient(90deg, #ef4444, #f97316); animation: blink .5s steps(2) infinite; }
+    @keyframes blink { 50% { opacity: .55; } }
+    .quiz .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 15px; color: #92400e; gap: 6px; }
+    .dots { display: flex; gap: 4px; align-items: center; }
+    .dots b {
+        width: 22px; height: 22px; border-radius: 50%; font-weight: 400; font-size: 13px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: #f1e1bb; border: 2px solid #d6b46a; color: transparent;
+    }
+    .dots b.on { background: var(--gold); border-color: #b45309; color: #fff; animation: popIn .3s ease; }
+    .dots b.last { border-style: dashed; color: #b45309; }
+    .dots b.last.on { background: #f97316; color: #fff; }
+    @keyframes popIn { from { transform: scale(1.8); } }
+    .combo { color: #ea580c; }
+    .combo.pop, .score.pop { animation: popIn .3s ease; }
+    .score { color: var(--ink); background: #fff; border-radius: 999px; padding: 1px 10px; border: 2px solid #e7d3a7; }
+    .question {
+        display: flex; align-items: center; justify-content: center;
+        margin-top: 6px; min-height: 60px; font-size: 42px; white-space: nowrap;
+    }
+    .question.long { font-size: 33px; }
+    .question.xlong { font-size: 25px; }
+    .qh { display: flex; align-items: center; gap: .22em; }
+    .tok, .cells { display: inline-flex; align-items: center; }
+    /* 답칸 */
+    .cell {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: .95em; height: 1.2em; margin: 0 .04em; border-radius: .22em;
+        font-size: inherit; line-height: 1;
+        background: #fff; border: 3px solid #d6b46a; color: #2563eb;
+        transition: background .15s, border-color .15s;
+    }
+    .cell.cur { border-color: #f97316; background: #fff7ed; box-shadow: 0 0 0 3px rgba(249, 115, 22, .3); }
+    .cell.given { background: #f1e1bb; color: #92400e; border-style: dashed; }
+    .cell.ok { border-color: var(--green); color: #16a34a; background: #dcfce7; }
+    .cell.bad { border-color: var(--red); color: #dc2626; background: #fee2e2; animation: shake .4s; }
+    /* 세로셈 */
+    .vgrid {
+        display: inline-grid; grid-template-columns: repeat(var(--cols), 1.08em);
+        column-gap: .12em; row-gap: .06em; justify-items: center; align-items: center;
+        font-size: clamp(26px, 4.2dvh, 36px); line-height: 1.1;
+    }
+    .vgrid .cell { width: 1.02em; margin: 0; }
+    .vgrid .sym { color: #92400e; }
+    .vgrid .vline { grid-column: 1 / -1; justify-self: stretch; height: 3px; background: var(--ink); border-radius: 2px; margin: 2px 0; }
+    .memo {
+        width: 1.3em; height: 1.05em; font-size: .68em; line-height: 1; border-radius: .25em;
+        display: inline-flex; align-items: center; justify-content: center;
+        border: 2px dashed #fdba74; background: #fff7ed; color: #ea580c;
+    }
+    .memo.cur { border-style: solid; border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234, 88, 12, .25); }
+    .hint { min-height: 22px; text-align: center; font-size: 17px; color: #16a34a; }
+    .pad {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px;
+        padding: 10px 14px max(14px, env(safe-area-inset-bottom));
+    }
+    .key {
+        height: clamp(46px, 7dvh, 62px); border-radius: 16px;
+        font-size: 32px; background: #fff;
+        box-shadow: 0 5px 0 #d6b46a; border: 2px solid #e7d3a7;
+        transition: transform .06s, box-shadow .06s;
+    }
+    .key:active, .key.down { transform: translateY(4px); box-shadow: 0 1px 0 #d6b46a; }
+    .key.del { background: #fed7aa; box-shadow: 0 5px 0 #ea9a5a; border-color: #fdba74; font-size: 26px; }
+    .key.ok { background: var(--green); color: #fff; box-shadow: 0 5px 0 #15803d; border-color: #16a34a; font-size: 26px; }
+    .key.ok.wait { filter: grayscale(.7) opacity(.6); }
+    .pad.off .key { opacity: .5; pointer-events: none; }
+
+    /* 턴 시작 전 준비 카드 */
+    .ready { position: absolute; inset: -16px 0 0; z-index: 9; padding: 0 12px max(12px, env(safe-area-inset-bottom)); display: none; }
+    .ready.on { display: flex; }
+    .ready-card {
+        flex: 1; display: flex; flex-direction: column; gap: 9px; padding: 14px 14px 14px; overflow-y: auto;
+        animation: cardIn .35s cubic-bezier(.2, 1.4, .4, 1) both;
+    }
+    .r-title { text-align: center; font-size: 28px; color: #be123c; }
+    .r-sub { text-align: center; font-size: 16px; color: #92400e; margin-top: -6px; }
+    .r-queue { display: flex; justify-content: center; gap: 8px; }
+    .r-queue span {
+        width: 40px; height: 40px; border-radius: 13px; font-size: 20px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: #fff; border: 3px solid var(--oc);
+        animation: popIn .3s ease both;
+    }
+    .r-queue span.crit { position: relative; box-shadow: 0 0 0 3px #fde68a; }
+    .r-queue span.crit::after { content: "💥"; position: absolute; right: -8px; top: -10px; font-size: 15px; }
+    .r-ops { display: flex; flex-direction: column; gap: 6px; }
+    .r-op {
+        display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 8px;
+        background: #fff; border: 2px solid #e7d3a7; border-left: 7px solid var(--oc); border-radius: 12px; padding: 6px 10px;
+    }
+    .r-op b { font-weight: 400; font-size: 18px; white-space: nowrap; }
+    .r-op span { grid-column: 1 / -1; grid-row: 2; font-size: 14px; color: #92400e; line-height: 1.25; }
+    .r-op em { font-style: normal; font-size: 17px; white-space: nowrap; }
+    .r-tip { text-align: center; font-size: 15px; color: #92400e; }
+    .ready-card .btn { margin-top: auto; }
+
+    .flash { position: absolute; inset: 0; z-index: 30; pointer-events: none; opacity: 0; }
+    .flash.red { background: rgba(239, 68, 68, .45); animation: flash .45s ease; }
+    .flash.white { background: rgba(255, 255, 255, .7); animation: flash .35s ease; }
+    @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+    /* ===== 스테이지 클리어 · 모험 끝 ===== */
+    .over { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)); z-index: 5; }
+    .over .card { width: 100%; max-height: 100%; overflow-y: auto; padding: 20px 14px 16px; text-align: center; animation: cardIn .45s cubic-bezier(.2, 1.4, .4, 1) both; }
+    @keyframes cardIn { from { transform: translateY(10%) scale(.8); opacity: 0; } }
+    .card h2 { font-size: 38px; font-weight: 400; color: #ea580c; text-shadow: 0 3px 0 #fde68a; }
+    .card .sub { font-size: 17px; color: #92400e; line-height: 1.4; }
+    .card h4 { font-size: 21px; font-weight: 400; margin: 14px 0 8px; }
+    .tally { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0 4px; }
+    .tally div { background: #fff; border: 2px solid #e7d3a7; border-radius: 14px; padding: 6px 4px; font-size: 14px; color: #92400e; }
+    .tally div b { display: block; font-weight: 400; font-size: 22px; color: var(--ink); }
+    .tally .wide { grid-column: 1 / -1; }
+    .newrec { display: inline-block; margin: 2px; font-size: 14px; color: #fff; background: #e11d48; border-radius: 999px; padding: 2px 10px; animation: popIn .4s ease both; }
+    .coins-got { font-size: 30px; margin: 10px 0 2px; color: #b45309; }
+    .coins-got small { display: block; font-size: 14px; color: #92400e; }
+    .choices { display: flex; flex-direction: column; gap: 9px; }
+    .choice {
+        position: relative; display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: center; text-align: left;
+        background: #fff; border: 3px solid #d6b46a; border-radius: 18px; padding: 10px; box-shadow: 0 5px 0 #d6b46a;
+        animation: cardIn .4s ease both;
+    }
+    .choice:nth-child(2) { animation-delay: .08s; }
+    .choice:nth-child(3) { animation-delay: .16s; }
+    .choice:active { transform: translateY(3px); box-shadow: 0 2px 0 #d6b46a; }
+    .choice.rare { border-color: var(--rare); box-shadow: 0 5px 0 #1d4ed8; }
+    .choice.legend { border-color: var(--legend); box-shadow: 0 5px 0 #b45309, 0 0 18px rgba(245, 158, 11, .55); background: #fffbeb; }
+    .choice.gift { grid-template-columns: 1fr; }
+    .ch-op {
+        display: flex; flex-direction: column; align-items: center; gap: 1px;
+        background: var(--oc); color: #fff; border-radius: 13px; padding: 7px 4px;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+    }
+    .ch-op .ic { font-size: 26px; }
+    .ch-desc { grid-column: 1 / -1; font-size: 13px; color: #92400e; margin-top: -2px; }
+    .ch-op b { font-weight: 400; font-size: 17px; }
+    .ch-op small { font-size: 13px; }
+    .ch-rw { display: flex; align-items: center; gap: 8px; }
+    .ch-rw .ic { font-size: 32px; flex: none; }
+    .ch-rw b { display: block; font-weight: 400; font-size: 18px; }
+    .ch-rw small { font-size: 14px; color: #92400e; }
+    .rar { position: absolute; top: -9px; right: 10px; font-size: 12px; padding: 1px 8px; border-radius: 999px; color: #fff; background: #a8a29e; }
+    .rare .rar { background: var(--rare); }
+    .legend .rar { background: var(--legend); }
+    .diff { position: absolute; top: -9px; left: 10px; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: #fff; border: 2px solid #e7d3a7; }
+    .card .actions { display: flex; gap: 10px; margin-top: 16px; }
+    .card .actions .btn { flex: 1; font-size: 21px; padding: 12px; }
+    .card .link { margin-top: 12px; font-size: 16px; color: #a16207; text-decoration: underline; }
+    .confetti { position: absolute; top: -20px; width: 10px; height: 14px; z-index: 6; animation: fall linear forwards; pointer-events: none; }
+    @keyframes fall { to { transform: translateY(110dvh) rotate(720deg); } }
+
+    /* 아래에서 올라오는 시트 (기록) */
+    .sheet-wrap {
+        position: absolute; inset: 0; z-index: 35;
+        background: rgba(27, 16, 51, .55);
+        display: flex; align-items: flex-end;
+        opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .sheet-wrap.on { opacity: 1; pointer-events: auto; }
+    .sheet {
+        width: 100%; max-height: 85%; overflow-y: auto; padding: 20px 18px max(20px, env(safe-area-inset-bottom));
+        border-radius: 28px 28px 0 0; border-bottom: 0;
+        transform: translateY(100%); transition: transform .28s cubic-bezier(.2, 1.2, .4, 1);
+    }
+    .sheet-wrap.on .sheet { transform: none; }
+    .sheet h3 { text-align: center; font-size: 26px; font-weight: 400; margin-bottom: 4px; }
+    .sheet .sub { text-align: center; font-size: 15px; color: #92400e; margin-bottom: 12px; }
+    .rec-rows { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .rec-row { display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid #e7d3a7; border-radius: 14px; padding: 5px 10px; font-size: 17px; }
+    .rec-row svg { width: 34px; height: 34px; flex: none; }
+    .rec-row span { flex: 1; }
+    .rec-row.none { opacity: .45; }
+    .sheet .btn { width: 100%; }
+
+    /* 확인창 · 알림 */
+    .modal { position: absolute; inset: 0; z-index: 40; background: rgba(27, 16, 51, .6); display: none; align-items: center; justify-content: center; padding: 24px; }
+    .modal.on { display: flex; }
+    .modal .box { width: 100%; max-width: 340px; padding: 24px 18px 18px; text-align: center; }
+    .modal p { font-size: 21px; margin-bottom: 18px; line-height: 1.35; white-space: pre-line; }
+    .modal .btns { display: flex; gap: 10px; }
+    .modal .btns .btn { flex: 1; font-size: 21px; padding: 12px; }
+    .toast {
+        position: absolute; left: 50%; bottom: 18%; z-index: 50; transform: translateX(-50%);
+        background: rgba(59, 36, 16, .92); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 17px;
+        white-space: nowrap; opacity: 0; transition: opacity .2s; pointer-events: none;
+    }
+    .toast.on { opacity: 1; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .actor .bob, .cloud, .sky.night::before { animation: none; }
+    }
+</style>
 </head>
 <body>
-    <div class="container">
-        <!-- 타이틀 화면 -->
-        <div class="screen active title-screen" id="title-screen">
-            <h1>🎯 연산RPG</h1>
-            <p>계산으로 몬스터를 물리치세요!</p>
-            <button class="btn btn-primary" onclick="showStageSelect()">게임 시작</button>
-        </div>
+<div id="app">
 
-        <!-- 스테이지 선택 화면 -->
-        <div class="screen" id="stage-select">
-            <h2 style="text-align: center; margin-bottom: 20px; color: #333;">스테이지 선택</h2>
-            <div class="stage-grid" id="stage-grid">
-                <!-- 스테이지 카드들이 여기에 생성됩니다 -->
+    <!-- 타이틀 -->
+    <section class="screen on" id="scr-title">
+        <div class="scene-bg"></div>
+        <div class="top-right"><button class="icon-btn" data-sound aria-label="소리 켜기/끄기">🔊</button></div>
+        <h1 class="logo"><div class="l1">연산</div><div class="l2">RPG</div></h1>
+        <div class="actor hero"><div class="bob" data-svg="hero"></div></div>
+        <div class="actor monster"><div class="bob" data-svg="slime"></div></div>
+        <div class="menu panel">
+            <div class="row">
+                <button class="grade-chip" id="btnGrade"></button>
+                <span class="coin-pill" id="titleCoins"></span>
             </div>
-            <div style="text-align: center; margin-top: 30px;">
-                <button class="btn btn-secondary" onclick="showTitle()">메인으로</button>
+            <div class="record-line" id="titleRecord"></div>
+            <div class="cycle-pick" id="cyclePick" hidden>
+                <button id="cycleDown" aria-label="회차 내리기">◀</button><span id="cycleText"></span><button id="cycleUp" aria-label="회차 올리기">▶</button>
             </div>
-        </div>
-
-        <!-- 전투 준비 화면 -->
-        <div class="screen" id="battle-prep">
-            <div class="battle-prep">
-                <div class="battle-prep-content">
-                    <div class="player-info">
-                        <h2>플레이어 정보</h2>
-                        <div class="monster" style="background: linear-gradient(45deg, #2196F3, #21CBF3);">🧙‍♂️</div>
-                        <h3>용사</h3>
-                        <p>체력: <span id="player-hp-display">100</span>/<span id="player-maxhp-display">100</span></p>
-                        <div class="prep-health-bar">
-                            <div class="prep-health-fill" id="prep-player-health-bar"></div>
-                        </div>
-                        <p>공격력: <span id="player-attack-display">20</span></p>
-                        <p>크리티컬: <span id="player-critical-display">30</span></p>
-                    </div>
-                    <div class="vs">VS</div>
-                    <div class="monster-info">
-                        <h2>몬스터 정보</h2>
-                        <div class="monster" id="monster-display">🟢</div>
-                        <h3 id="monster-name">더하기 슬라임</h3>
-                        <p>체력: <span id="monster-hp-display">100</span></p>
-                        <p>공격력: <span id="monster-attack-display">35</span></p>
-                        <div style="margin-top: 20px;">
-                            <h4>주요 문제 패턴</h4>
-                            <p id="problem-pattern">한자리수 덧셈</p>
-                        </div>
-                    </div>
-                </div>
-                <div style="text-align: center; margin-top: 30px;">
-                    <button class="btn btn-primary" onclick="startBattle()">전투 시작!</button>
-                    <button class="btn btn-secondary" onclick="showStageSelect()">돌아가기</button>
-                </div>
+            <button class="btn big pink" id="btnStart">⚔️ 모험 시작</button>
+            <div class="row">
+                <button class="btn gold" id="btnShop">🛒 상점</button>
+                <button class="btn blue" id="btnRecords">📊 기록</button>
             </div>
         </div>
+    </section>
 
-        <!-- 전투 화면 -->
-        <div class="screen" id="battle-screen">
-            <!-- 상단 정보 영역 -->
-            <div class="battle-top">
-                <!-- 좌측 플레이어 정보 -->
-                <div class="player-stats">
-                    <h3>🧙‍♂️ 용사</h3>
-                    <div class="stats-row">
-                        <span>⚔️ <span id="player-attack-stat">20</span></span>
-                        <span>🛡️ <span id="player-defense-stat">0</span></span>
-                    </div>
-                    <div class="health-bar">
-                        <div class="health-fill" id="player-health-bar">
-                            <div class="health-text" id="player-health-text">100/100</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 중앙 게임 정보 -->
-                <div class="game-info">
-                    <div class="stage-info">스테이지 <span id="stage-number">1</span></div>
-                    <div class="turn-info">턴: <span id="turn-display">플레이어</span></div>
-                    <div class="timer-display" id="timer">30</div>
-                </div>
-
-                <!-- 우측 몬스터 정보 -->
-                <div class="monster-stats">
-                    <h3 id="monster-name-battle">👹 슬라임</h3>
-                    <div class="stats-row">
-                        <span>⚔️ <span id="monster-attack-stat">35</span></span>
-                        <span>🛡️ <span id="monster-defense-stat">0</span></span>
-                    </div>
-                    <div class="health-bar">
-                        <div class="health-fill" id="monster-health-bar">
-                            <div class="health-text" id="monster-health-text">100/100</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 중앙 캐릭터 영역 -->
-            <div class="character-area">
-                <div class="player-character">
-                    <div class="character-sprite player-sprite">🧙‍♂️</div>
-                    <div class="character-name">용사</div>
-                </div>
-                <div class="vs-text">VS</div>
-                <div class="monster-character">
-                    <div class="character-sprite monster-sprite" id="monster-sprite">👹</div>
-                    <div class="character-name" id="monster-character-name">슬라임</div>
-                </div>
-            </div>
-
-            <!-- 문제 영역 -->
-            <div class="problem-area">
-                <div class="problem-text" id="problem">문제를 생성 중...</div>
-                <!-- 콤보 표시 -->
-                <div class="combo-display" id="combo-display" style="display: none;">2 COMBO!</div>
-            </div>
-
-            <!-- 답 입력 영역 -->
-            <div class="input-area">
-                <input type="number" 
-                       class="answer-input" 
-                       id="answer-input" 
-                       placeholder="답 입력"
-                       autocomplete="off"
-                       inputmode="numeric">
-                <button class="submit-btn" 
-                        id="submit-btn" 
-                        type="button">확인</button>
-            </div>
-
-            <!-- 턴 전환 알림 -->
-            <div class="turn-change-overlay" id="turn-change-overlay">
-                <div class="turn-change-text" id="turn-change-text">몬스터 턴!</div>
-            </div>
-
-            <!-- 승리 연출 오버레이 -->
-            <div class="victory-overlay" id="victory-overlay">
-                <div class="victory-content">
-                    <div class="victory-text">몬스터 처치!</div>
-                    <div class="victory-subtext">Victory!</div>
-                </div>
-            </div>
-
-            <!-- 피드백 오버레이 -->
-            <div class="feedback-overlay" id="feedback"></div>
-            
-            <!-- 데미지 플래시 -->
-            <div class="damage-flash" id="damage-flash"></div>
+    <!-- 학년 선택 -->
+    <section class="screen" id="scr-grade">
+        <div class="wrap">
+            <h2>몇 학년이에요?</h2>
+            <p>학년에 맞는 문제가 나와요. 나중에 언제든 바꿀 수 있어요!</p>
+            <div class="grades" id="grades"></div>
         </div>
+    </section>
 
-        <!-- 전투 결과 화면 -->
-        <div class="screen" id="result-screen">
-            <div class="result-content">
-                <h2 id="result-title">승리!</h2>
-                <div style="margin: 30px 0;">
-                    <p>맞춘 문제 수: <span id="final-correct">0</span>/5</p>
-                    <p>획득 코인: <span id="earned-coins">50</span></p>
+    <!-- 상점 -->
+    <section class="screen" id="scr-shop">
+        <div class="shop-head">
+            <button class="icon-btn" id="shopBack" aria-label="뒤로">🏠</button>
+            <h2 class="head-title">상점</h2>
+            <span class="coin-pill" id="shopCoins"></span>
+        </div>
+        <div class="shop-list" id="shopList"></div>
+    </section>
+
+    <!-- 전투 -->
+    <section class="screen" id="scr-battle">
+        <div class="scene" id="scene">
+            <div class="scene-bg"></div>
+            <div class="bar-top">
+                <button class="icon-btn" id="btnQuit" aria-label="모험 그만두기">🏠</button>
+                <div class="title" id="battleTitle"></div>
+                <button class="icon-btn" data-sound aria-label="소리 켜기/끄기">🔊</button>
+            </div>
+            <div class="plates">
+                <div class="plate">
+                    <div class="nm"><span>🧒 용사</span><small id="heroStat"></small></div>
+                    <div class="hp"><i class="ghost" id="heroGhost"></i><i class="fill" id="heroFill"></i><em id="heroHpText"></em></div>
                 </div>
-
-                <div class="benefit-selection" id="benefit-selection">
-                    <h3>보상 선택</h3>
-                    <div class="benefit-options" id="benefit-options">
-                        <!-- 베네핏 옵션들이 여기에 생성됩니다 -->
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin-top: 30px;">
-                    <button class="btn btn-primary" onclick="nextStage()" id="next-stage-btn" style="display: none;">다음 스테이지</button>
+                <div class="plate mon">
+                    <div class="nm"><span id="monName"></span><small id="monStat"></small></div>
+                    <div class="hp"><i class="ghost" id="monGhost"></i><i class="fill" id="monFill"></i><em id="monHpText"></em></div>
                 </div>
             </div>
+            <div class="buffs" id="buffs"></div>
+            <div class="actor hero" id="heroActor"><div class="bob" data-svg="hero"></div></div>
+            <div class="actor monster" id="monActor"><div class="bob" id="monSvg"></div></div>
+            <div class="banner" id="banner"><span></span></div>
         </div>
-    </div>
+        <div class="lower">
+            <div class="quiz panel">
+                <div class="qhead"><span class="optag" id="opTag"></span><span class="sec" id="secText"></span></div>
+                <div class="timer" id="timer"><i></i></div>
+                <div class="meta">
+                    <div class="dots" id="dots"></div>
+                    <div class="combo" id="combo"></div>
+                    <div class="score" id="scoreText">⭐ 0</div>
+                </div>
+                <div class="question" id="question"></div>
+                <div class="hint" id="hint"></div>
+            </div>
+            <div class="pad off" id="pad">
+                <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+                <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+                <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+                <button class="key del" data-k="del" aria-label="지우기">⌫</button><button class="key" data-k="0">0</button><button class="key ok" data-k="ok">확인</button>
+            </div>
+            <div class="ready" id="ready"></div>
+        </div>
+    </section>
 
-    <script>
-        // 게임 상태
-        let currentStage = 1;
-        let maxUnlockedStage = 1;
-        let gameState = 'title';
-        
-        // 플레이어 능력치
-        let player = {
-            hp: 100,
-            maxHp: 100,
-            attack: 20,
-            critical: 30,
-            timeLimit: 30,
-            defense: 0,
-            shield: 0
-        };
+    <!-- 스테이지 클리어 · 보상 선택 · 모험 끝 -->
+    <section class="screen" id="scr-over">
+        <div class="scene-bg"></div>
+        <div class="over"><div class="card panel" id="overCard"></div></div>
+    </section>
 
-        // 스테이지 정보
-        const stageData = [
-            { stage: 1, name: "더하기 슬라임", monster: "🟢", hp: 100, attack: 35, pattern: "한자리수 덧셈", color: "#4CAF50" },
-            { stage: 2, name: "동굴 박쥐", monster: "🦇", hp: 120, attack: 40, pattern: "한자리수 사칙연산", color: "#9C27B0" },
-            { stage: 3, name: "독버섯", monster: "🍄", hp: 140, attack: 45, pattern: "받아올림이 있는 덧셈", color: "#FF5722" },
-            { stage: 4, name: "늑대", monster: "🐺", hp: 180, attack: 60, pattern: "두자리수 덧셈, 뺄셈", color: "#607D8B" },
-            { stage: 5, name: "골렘", monster: "🗿", hp: 220, attack: 70, pattern: "구구단과 간단한 나눗셈", color: "#795548" },
-            { stage: 6, name: "마법사", monster: "🧙", hp: 260, attack: 80, pattern: "세자리수 덧셈, 뺄셈", color: "#3F51B5" },
-            { stage: 7, name: "드래곤", monster: "🐲", hp: 320, attack: 95, pattern: "두자리수 곱셈", color: "#F44336" },
-            { stage: 8, name: "악마", monster: "👺", hp: 380, attack: 110, pattern: "복잡한 나눗셈", color: "#E91E63" },
-            { stage: 9, name: "거대 거미", monster: "🕷️", hp: 450, attack: 125, pattern: "세자리수 사칙연산", color: "#424242" },
-            { stage: 10, name: "마왕", monster: "👑", hp: 550, attack: 150, pattern: "최고 난이도 혼합 문제", color: "#000000" }
-        ];
+    <div class="sheet-wrap" id="sheet"><div class="sheet panel" id="sheetBody"></div></div>
+    <div class="flash" id="flash"></div>
+    <div class="modal" id="modal"><div class="box panel"><p id="modalText"></p><div class="btns"><button class="btn gray" id="modalNo">아니요</button><button class="btn pink" id="modalYes">네</button></div></div></div>
+    <div class="toast" id="toast"></div>
+</div>
 
-        // 베네핏 옵션들
-        const benefits = [
-            { name: "공격력 증가", effect: () => player.attack += 5, desc: "공격력 +5" },
-            { name: "체력 증가", effect: () => { player.maxHp += 20; player.hp += 20; }, desc: "최대 체력 +20" },
-            { name: "제한시간 증가", effect: () => player.timeLimit += 5, desc: "제한시간 +5초" },
-            { name: "크리티컬 증가", effect: () => player.critical += 8, desc: "크리티컬 공격력 +8" },
-            { name: "방어력 증가", effect: () => player.defense += 5, desc: "방어력 +5" },
-            { name: "체력 회복", effect: () => player.hp = Math.min(player.maxHp, player.hp + Math.floor(player.maxHp * 0.5)), desc: "체력 50% 회복" },
-            { name: "보호막", effect: () => player.shield += 1, desc: "다음 공격 1회 무효화" },
-            { name: "코인 보너스", effect: () => {}, desc: "추가 코인 +30" }
-        ];
+<script>
+/* =========================================================================
+   연산RPG — 세로 스마트폰용 로그라이크 연산 게임
+   한 판(런) = 10스테이지. 스테이지를 깰 때마다 [문제 카드 + 보상] 중 하나를 골라
+   문제 풀과 능력이 바뀐다. 쓰러지면 점수만큼 코인을 받고, 상점에서 영구 성장한다.
+   ========================================================================= */
 
-        // 전투 관련 변수
-        let currentMonster = {};
-        let battleTimer = 30;
-        let timerInterval;
-        let correctAnswers = 0;
-        let currentProblem = {};
-        let playerTurn = true;
-        let lastProblem = null; // 마지막 문제 저장
-        let comboCount = 0; // 연속 정답 콤보
+const $ = (id) => document.getElementById(id);
+const R = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = (arr) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = R(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+const fmt = (n) => Math.round(n).toLocaleString("ko-KR");
 
-        // 화면 전환 함수들
-        function showScreen(screenId) {
-            console.log('Switching to screen:', screenId);
-            
-            // 모든 스크린 숨기기
-            document.querySelectorAll('.screen').forEach(screen => {
-                screen.classList.remove('active');
-                screen.style.display = 'none';
-            });
-            
-            // 타겟 스크린 보이기
-            const targetScreen = document.getElementById(screenId);
-            if (targetScreen) {
-                targetScreen.classList.add('active');
-                targetScreen.style.display = 'block';
-                console.log('Screen switched successfully to:', screenId);
-            } else {
-                console.error('Screen not found:', screenId);
-            }
-        }
+/* =========================================================================
+   [설정값] 밸런스는 여기서 조절
+   ========================================================================= */
+const STAGE_COUNT = 10;
+const HITS_FOR_CRIT = 5;     // 한 턴에 이만큼 맞히면 크리티컬 (🍀 보상으로 줄어듦)
+const WIN_HEAL = 0.2;        // 스테이지 클리어 시 최대 체력의 20% 회복
+const LEVEL_DMG_BONUS = .15; // 학년 기본보다 1레벨 높을 때마다 데미지 +15%
+const MAX_CYCLE = 5;
 
-        function showTitle() {
-            gameState = 'title';
-            showScreen('title-screen');
-        }
+/* 학년 보정: 같은 문제라도 어릴수록 오래 걸림 (4학년 = 1.0) */
+const GRADE_FACTOR = [1.8, 1.6, 1.4, 1.2, 1.0, .9, .9, .8];
+/* 예상 풀이 시간(초) = 생각하는 시간 × 학년 보정 + 칸 입력 0.8초씩 + 확인 1초 */
+function expectedTime(p, grade) { return p.cog * GRADE_FACTOR[grade] + .8 * (p.ans.length - p.hints) + 1; }
+/* 제한시간 = 예상 시간 × 배율. 첫 스테이지 2배에서 스테이지마다 줄어 최소 1.3배. 어떤 문제도 5초 미만은 없음 */
+function timeLimit(p, stage, cycle, bonus) {
+    const f = Math.max(1.3, 2 - .08 * (stage - 1) - .1 * (cycle - 1));
+    return Math.max(5, Math.round((p.exp * f + bonus) * 2) / 2);
+}
+/* 몬스터 능력치 */
+function monStats(stage, cycle) {
+    const s = stage - 1, boss = stage === STAGE_COUNT;
+    const hp = (80 + 35 * s + 6 * s * s) * (1 + .4 * (cycle - 1)) * (boss ? 1.4 : 1);
+    const atk = (14 + 5 * s) * (1 + .3 * (cycle - 1)) * (boss ? 1.2 : 1);
+    return { hp: Math.round(hp), atk: Math.round(atk) };
+}
+/* 문제 하나의 점수: 레벨 점수 + 예상 시간보다 빨리 풀수록 최대 +100 + 콤보 */
+function scoreFor(level, used, exp, combo, cycle) {
+    const speed = 100 * Math.min(1, Math.max(0, (exp - used) / exp));
+    return Math.round((100 * (1 + .25 * (level - 1)) + speed + combo * 10) * (1 + .5 * (cycle - 1)));
+}
+const COIN_RATE = 10;        // 점수 10점 = 코인 1개
 
-        function showStageSelect() {
-            console.log('showStageSelect called');
-            gameState = 'stage-select';
-            updateStageGrid();
-            showScreen('stage-select');
-        }
+/* =========================================================================
+   연산과 학년
+   ========================================================================= */
+const OPS = {
+    add: { icon: "➕", name: "덧셈",   color: "#16a34a" },
+    sub: { icon: "➖", name: "뺄셈",   color: "#2563eb" },
+    mul: { icon: "✖️", name: "곱셈",   color: "#ea580c" },
+    div: { icon: "➗", name: "나눗셈", color: "#9333ea" },
+};
+const OP_KEYS = ["add", "sub", "mul", "div"];
+const MAX_LEVEL = 10;
 
-        function updateStageGrid() {
-            console.log('updateStageGrid called');
-            const grid = document.getElementById('stage-grid');
-            if (!grid) {
-                console.error('Stage grid element not found');
-                return;
-            }
-            grid.innerHTML = '';
-            
-            stageData.forEach((stage, index) => {
-                const card = document.createElement('div');
-                card.className = `stage-card ${index + 1 > maxUnlockedStage ? 'locked' : ''}`;
-                card.innerHTML = `
-                    <h3>스테이지 ${stage.stage}</h3>
-                    <div style="font-size: 2em; margin: 10px 0;">${stage.monster}</div>
-                    <p><strong>${stage.name}</strong></p>
-                    <p>${stage.pattern}</p>
-                `;
-                
-                if (index + 1 <= maxUnlockedStage) {
-                    card.onclick = () => selectStage(index + 1);
-                }
-                
-                grid.appendChild(card);
-            });
-            console.log('Stage grid updated with', stageData.length, 'stages');
-        }
+/* 학년: 연산별 시작 레벨 [덧셈, 뺄셈, 곱셈, 나눗셈] 과 첫 스테이지에 나오는 연산 */
+const GRADES = [
+    { name: "아직 초등학교 안 들어갔어요", short: "미취학", icon: "🧸", start: [1, 1, 1, 1], first: ["add"] },
+    { name: "1학년", short: "1학년", icon: "🎒", start: [2, 2, 1, 1], first: ["add"] },
+    { name: "2학년", short: "2학년", icon: "🎒", start: [4, 4, 2, 1], first: ["add", "sub"] },
+    { name: "3학년", short: "3학년", icon: "🎒", start: [6, 6, 4, 2], first: ["add", "sub"] },
+    { name: "4학년", short: "4학년", icon: "🎒", start: [7, 7, 5, 4], first: ["add", "sub", "mul"] },
+    { name: "5학년", short: "5학년", icon: "🎒", start: [8, 8, 6, 6], first: ["mul", "div"] },
+    { name: "6학년", short: "6학년", icon: "🎒", start: [8, 8, 7, 7], first: ["mul", "div"] },
+    { name: "초등학교 졸업했어요", short: "졸업", icon: "🎓", start: [9, 9, 8, 8], first: ["add", "sub", "mul", "div"] },
+];
+const gradeStart = (g, op) => GRADES[g].start[OP_KEYS.indexOf(op)];
 
-        function selectStage(stageNum) {
-            currentStage = stageNum;
-            const stage = stageData[stageNum - 1];
-            currentMonster = { ...stage };
-            
-            // 전투 준비 화면 업데이트
-            document.getElementById('monster-display').textContent = stage.monster;
-            document.getElementById('monster-display').style.background = `linear-gradient(45deg, ${stage.color}, ${stage.color}99)`;
-            document.getElementById('monster-name').textContent = stage.name;
-            document.getElementById('monster-hp-display').textContent = stage.hp;
-            document.getElementById('monster-attack-display').textContent = stage.attack;
-            document.getElementById('problem-pattern').textContent = stage.pattern;
-            
-            document.getElementById('player-hp-display').textContent = player.hp;
-            document.getElementById('player-maxhp-display').textContent = player.maxHp;
-            document.getElementById('player-attack-display').textContent = player.attack;
-            document.getElementById('player-critical-display').textContent = player.critical;
-            
-            // 준비화면 체력바 업데이트
-            const prepHealthBar = document.getElementById('prep-player-health-bar');
-            if (prepHealthBar) {
-                const healthPercent = (player.hp / player.maxHp) * 100;
-                prepHealthBar.style.width = healthPercent + '%';
-            }
-            
-            showScreen('battle-prep');
-        }
+/* ----- 문제 만들기 (정수만) -----
+   문제 p = { form: "h" 가로식 | "v" 세로셈 | "blank" □ 찾기,
+              ans: 칸에 채울 숫자들, cog: 생각하는 데 드는 초(4학년 기준), hint: 미리 채워 줄 칸 수 } */
+const len = (n) => String(n).length;
+const dig = (n, i) => Math.floor(n / 10 ** i) % 10;          // 오른쪽에서 i번째 자리 숫자
+const nzCols = (...ns) => { let c = 0; for (let i = 0; i < Math.max(...ns.map(len)); i++) if (ns.some(n => dig(n, i))) c++; return Math.max(1, c); };
+function carriesAdd(ns) { let c = 0, carry = 0; for (let i = 0; i < Math.max(...ns.map(len)); i++) { carry = Math.floor((carry + ns.reduce((s, n) => s + dig(n, i), 0)) / 10); if (carry) c++; } return c; }
+function borrowsSub(a, b) { let c = 0, br = 0; for (let i = 0; i < len(a); i++) { if (dig(a, i) - br < dig(b, i)) { c++; br = 1; } else br = 0; } return c; }
+function carriesMul(a, d) { let c = 0, carry = 0; for (let i = 0; i < len(a); i++) { carry = Math.floor((dig(a, i) * d + carry) / 10); if (carry && i < len(a) - 1) c++; } return c; }
 
-        function startBattle() {
-            console.log('Starting battle...');
-            gameState = 'battle';
-            // 전투 상태 초기화
-            correctAnswers = 0;
-            comboCount = 0;
-            playerTurn = true;
-            battleTimer = player.timeLimit;
-            lastProblem = null;
-            
-            // UI 업데이트
-            updateBattleUI();
-            
-            console.log('Switching to battle screen...');
-            showScreen('battle-screen');
-            
-            // 화면 전환 후 바로 플레이어 턴 시작 (연출 포함)
-            setTimeout(() => {
-                showPlayerTurnOverlay();
-                setTimeout(() => {
-                    hidePlayerTurnOverlay();
-                    console.log('Generating first problem...');
-                    generateProblem();
-                    startTimer();
-                }, 1500);
-            }, 100);
-        }
+/* 생각하는 시간(초, 4학년 기준). 참고한 연구값: 한 자리 계산 약 3초,
+   두 자리 덧셈 받아올림 1번 약 6초 · 2번이면 12초 이상. 0만 있는 자리는 계산하지 않는 것으로 봄 */
+const cogAdd = (...ns) => ns.every(n => n < 10) ? 3 : 3 + 2 * (nzCols(...ns) - 1) + 3 * carriesAdd(ns);
+const cogSub = (a, b) => a < 20 && b < 10 ? (a > 10 ? 4 : 3) : 3.5 + 2 * (nzCols(a, b) - 1) + 3.5 * borrowsSub(a, b);
+const cogMul = (a, d) => a < 10 ? 3.5 : 3.5 + 3 * (nzCols(a) - 1) + 2.5 * carriesMul(a, d);
+const cogDiv = (b, q) => 4 + 4 * (nzCols(q) - 1) + (b >= 10 ? 4 : 0);
 
-        function updateBattleUI() {
-            // 스테이지 정보 업데이트
-            const stageNumber = document.getElementById('stage-number');
-            if (stageNumber) stageNumber.textContent = currentStage;
-            
-            // 플레이어 정보 업데이트
-            const playerAttackStat = document.getElementById('player-attack-stat');
-            const playerDefenseStat = document.getElementById('player-defense-stat');
-            if (playerAttackStat) playerAttackStat.textContent = player.attack;
-            if (playerDefenseStat) playerDefenseStat.textContent = player.defense;
-            
-            // 몬스터 정보 업데이트
-            const monsterNameBattle = document.getElementById('monster-name-battle');
-            const monsterAttackStat = document.getElementById('monster-attack-stat');
-            const monsterDefenseStat = document.getElementById('monster-defense-stat');
-            const monsterSprite = document.getElementById('monster-sprite');
-            const monsterCharacterName = document.getElementById('monster-character-name');
-            
-            if (monsterNameBattle) monsterNameBattle.textContent = `${currentMonster.monster} ${currentMonster.name}`;
-            if (monsterAttackStat) monsterAttackStat.textContent = currentMonster.attack;
-            if (monsterDefenseStat) monsterDefenseStat.textContent = currentMonster.defense || 0;
-            if (monsterSprite) {
-                monsterSprite.textContent = currentMonster.monster;
-                monsterSprite.style.background = `linear-gradient(45deg, ${currentMonster.color}, ${currentMonster.color}99)`;
-            }
-            if (monsterCharacterName) monsterCharacterName.textContent = currentMonster.name;
-            
-            // 턴 정보 업데이트
-            const turnDisplay = document.getElementById('turn-display');
-            if (turnDisplay) turnDisplay.textContent = '플레이어';
-            
-            updateHealthBars();
-        }
+const H = (q, a, cog) => ({ form: "h", q, ans: String(a), full: `${q} = ${a}`, cog });
+const V = (a, b, sym, r, cog, hint = 0) => ({ form: "v", terms: [a, b], sym, ans: String(r), full: `${a} ${sym} ${b} = ${r}`, cog, hint });
+const calc = (x, sym, y) => sym === "+" ? x + y : sym === "−" ? x - y : sym === "×" ? x * y : x / y;
 
-        function generateProblem() {
-            const stage = currentStage;
-            let problem;
-            
-            console.log('Generating problem for stage:', stage);
-            
-            try {
-                if (stage <= 2) {
-                    problem = generateSimpleAddSub();
-                } else if (stage <= 3) {
-                    problem = generateCarryAddition();
-                } else if (stage <= 4) {
-                    problem = generateTwoDigitAddSub();
-                } else if (stage <= 5) {
-                    problem = generateMultiplyDivide();
-                } else if (stage <= 6) {
-                    problem = generateThreeDigitAddSub();
-                } else if (stage <= 7) {
-                    problem = generateTwoDigitMultiply();
-                } else if (stage <= 8) {
-                    problem = generateComplexDivide();
-                } else {
-                    problem = generateMixedProblems();
-                }
-                
-                console.log('Generated problem:', problem);
-                
-                if (!problem || !problem.question || problem.answer === undefined) {
-                    throw new Error('Invalid problem generated');
-                }
-                
-                // 같은 문제가 연달아 나오지 않도록 체크
-                if (lastProblem && problem.question === lastProblem.question && problem.answer === lastProblem.answer) {
-                    console.log('Same problem detected, regenerating...');
-                    // 다시 생성 (최대 3번 시도)
-                    for (let i = 0; i < 3; i++) {
-                        if (stage <= 2) {
-                            problem = generateSimpleAddSub();
-                        } else if (stage <= 3) {
-                            problem = generateCarryAddition();
-                        } else if (stage <= 4) {
-                            problem = generateTwoDigitAddSub();
-                        } else if (stage <= 5) {
-                            problem = generateMultiplyDivide();
-                        } else if (stage <= 6) {
-                            problem = generateThreeDigitAddSub();
-                        } else if (stage <= 7) {
-                            problem = generateTwoDigitMultiply();
-                        } else if (stage <= 8) {
-                            problem = generateComplexDivide();
-                        } else {
-                            problem = generateMixedProblems();
-                        }
-                        
-                        if (!lastProblem || problem.question !== lastProblem.question || problem.answer !== lastProblem.answer) {
-                            break;
-                        }
-                    }
-                }
-                
-                lastProblem = { ...problem };
-                currentProblem = problem;
-                const problemElement = document.getElementById('problem');
-                if (problemElement) {
-                    problemElement.textContent = `${problem.question} = ?`;
-                    console.log('Problem displayed:', problem.question);
-                } else {
-                    console.error('Problem element not found');
-                }
-                
-                const inputElement = document.getElementById('answer-input');
-                if (inputElement) {
-                    inputElement.value = '';
-                    setTimeout(() => {
-                        inputElement.focus();
-                        inputElement.click();
-                    }, 200);
-                } else {
-                    console.error('Answer input element not found');
-                }
-                
-            } catch (error) {
-                console.error('Error generating problem:', error);
-                // 기본 문제로 대체
-                problem = { question: '5 + 3', answer: 8 };
-                currentProblem = problem;
-                const problemElement = document.getElementById('problem');
-                if (problemElement) {
-                    problemElement.textContent = `${problem.question} = ?`;
-                } else {
-                    console.error('Problem element not found in catch block');
-                }
-                
-                const inputElement = document.getElementById('answer-input');
-                if (inputElement) {
-                    inputElement.value = '';
-                    setTimeout(() => {
-                        inputElement.focus();
-                        inputElement.click();
-                    }, 200);
-                }
-            }
-        }
+/* □ 찾기: "x sym y = z" 에서 몇 자리를 가린다. hide = [[항 번호(0~2), [가릴 자리(왼쪽부터)]], ...]
+   답이 하나뿐일 때만 문제로 쓰고, 여러 개면 null */
+function blankP(x, sym, y, z, cog, hide) {
+    const toks = [String(x), String(y), String(z)];
+    const slots = [];
+    hide.forEach(([t, pos]) => [...pos].sort((a, b) => a - b).forEach(i => slots.push([t, i])));
+    let found = 0;
+    for (let v = 0; v < 10 ** slots.length; v++) {
+        const tk = toks.map(s => s.split(""));
+        const ds = String(v).padStart(slots.length, "0");
+        slots.forEach(([t, i], k) => { tk[t][i] = ds[k]; });
+        if (tk.some(a => a.length > 1 && a[0] === "0")) continue;
+        const [a, b, c] = tk.map(a => +a.join(""));
+        if (sym === "÷" && (b === 0 || a % b)) continue;
+        if (calc(a, sym, b) === c && ++found > 1) return null;
+    }
+    const hidden = (t, i) => slots.some(([tt, ii]) => tt === t && ii === i);
+    return {
+        form: "blank", sym,
+        parts: toks.map((s, t) => s.split("").map((ch, i) => hidden(t, i) ? null : ch)),
+        ans: slots.map(([t, i]) => toks[t][i]).join(""),
+        full: `${x} ${sym} ${y} = ${z}`, cog: cog + 3,          // 거꾸로 생각하는 데 +3초
+    };
+}
+const oneDigit = (t, n) => [[t, [R(0, len(n) - 1)]]];
+/* 세 자리 □ 찾기: 앞의 수 한 칸 + 답 한 칸. 답이 하나뿐인 조합이 나올 때까지 다시 뽑음 */
+function twoBlank3(sym) {
+    for (let i = 0; i < 60; i++) {
+        let a = R(200, 899), b = R(100, 699);
+        if (sym === "−" && a < b) [a, b] = [b, a];
+        const z = calc(a, sym, b), cog = sym === "+" ? cogAdd(a, b) : cogSub(a, b);
+        if (z < 100) continue;
+        const p = blankP(a, sym, b, z, cog, [[0, [R(0, 2)]], [2, [R(0, len(z) - 1)]]]);
+        if (p) { p.cog += 2; return p; }
+    }
+    const a = R(200, 899), b = R(100, 199);
+    return blankP(a, sym, b, calc(a, sym, b), sym === "+" ? cogAdd(a, b) : cogSub(a, b), oneDigit(0, a));
+}
 
-        // 문제 생성 함수들
-        function generateSimpleAddSub() {
-            try {
-                if (currentStage === 1) {
-                    // 1스테이지는 덧셈만
-                    const a = Math.floor(Math.random() * 9) + 1;
-                    const b = Math.floor(Math.random() * 9) + 1;
-                    return { question: `${a} + ${b}`, answer: a + b };
-                } else {
-                    // 2스테이지부터는 덧셈, 뺄셈 모두
-                    const a = Math.floor(Math.random() * 9) + 1;
-                    const b = Math.floor(Math.random() * 9) + 1;
-                    const operations = ['+', '-'];
-                    const operation = operations[Math.floor(Math.random() * 2)];
-                    
-                    if (operation === '+') {
-                        return { question: `${a} + ${b}`, answer: a + b };
-                    } else {
-                        const larger = Math.max(a, b);
-                        const smaller = Math.min(a, b);
-                        return { question: `${larger} - ${smaller}`, answer: larger - smaller };
-                    }
-                }
-            } catch (error) {
-                console.error('Error in generateSimpleAddSub:', error);
-                return { question: '5 + 3', answer: 8 };
-            }
-        }
+/* 연산별 레벨 1~10. 숫자를 무작정 키우지 않고, 머릿속이나 세로셈으로 풀 수 있는 범위에서 어려워진다.
+   "💡" = 첫 자리를 미리 채워 줌 */
+const LEVELS = {
+    add: [
+        { desc: "합이 10 이하", gen: () => { const a = R(1, 9), b = R(1, Math.max(1, 10 - a)); return H(`${a} + ${b}`, a + b, cogAdd(a, b)); } },
+        { desc: "한 자리 + 한 자리", gen: () => { const a = R(1, 9), b = R(1, 9); return H(`${a} + ${b}`, a + b, cogAdd(a, b)); } },
+        { desc: "두 자리 + 한 자리", gen: () => { const a = R(10, 99), b = R(1, 9); return H(`${a} + ${b}`, a + b, cogAdd(a, b)); } },
+        { desc: "두 자리 + 두 자리 (받아올림 없음)", gen: () => { const at = R(1, 8), au = R(0, 9), a = at * 10 + au, b = R(1, 9 - at) * 10 + R(0, 9 - au); return H(`${a} + ${b}`, a + b, cogAdd(a, b)); } },
+        { desc: "두 자리 + 두 자리 · 세로셈", gen: () => { const au = R(1, 9), a = R(1, 8) * 10 + au, b = R(1, 9) * 10 + R(10 - au, 9); return V(a, b, "+", a + b, cogAdd(a, b)); } },
+        { desc: "세 자리 + 세 자리 · 세로셈 💡", gen: () => { let a, b; do { a = R(100, 899); b = R(100, 899); } while (!carriesAdd([a, b])); return V(a, b, "+", a + b, cogAdd(a, b), 1); } },
+        { desc: "세 자리 + 세 자리 · 세로셈", gen: () => { let a, b; do { a = R(100, 899); b = R(100, 899); } while (carriesAdd([a, b]) < 2); return V(a, b, "+", a + b, cogAdd(a, b)); } },
+        { desc: "□ 찾기 (두 자리)", gen: () => { const a = R(11, 89), b = R(11, 89), t = R(0, 1); return blankP(a, "+", b, a + b, cogAdd(a, b), oneDigit(t, t ? b : a)); } },
+        { desc: "몇백몇십 암산", gen: () => { const a = R(11, 89) * 10, b = R(11, 89) * 10; return H(`${a} + ${b}`, a + b, cogAdd(a, b)); } },
+        { desc: "□ 찾기 (세 자리, 두 칸)", gen: () => twoBlank3("+") },
+    ],
+    sub: [
+        { desc: "10 이하 뺄셈", gen: () => { const a = R(2, 10), b = R(1, a); return H(`${a} − ${b}`, a - b, cogSub(a, b)); } },
+        { desc: "받아내림 (18까지)", gen: () => { const a = R(11, 18), b = R(a - 9, 9); return H(`${a} − ${b}`, a - b, cogSub(a, b)); } },
+        { desc: "두 자리 − 한 자리", gen: () => { const a = R(20, 99), b = R(1, 9); return H(`${a} − ${b}`, a - b, cogSub(a, b)); } },
+        { desc: "두 자리 − 두 자리 (받아내림 없음)", gen: () => { const at = R(2, 9), au = R(0, 9), a = at * 10 + au, b = R(1, at - 1) * 10 + R(0, au); return H(`${a} − ${b}`, a - b, cogSub(a, b)); } },
+        { desc: "두 자리 − 두 자리 · 세로셈", gen: () => { const au = R(0, 8), at = R(2, 9), a = at * 10 + au, b = R(1, at - 1) * 10 + R(au + 1, 9); return V(a, b, "−", a - b, cogSub(a, b)); } },
+        { desc: "세 자리 − 세 자리 · 세로셈 💡", gen: () => { let a, b; do { a = R(200, 999); b = R(100, a - 1); } while (!borrowsSub(a, b)); return V(a, b, "−", a - b, cogSub(a, b), 1); } },
+        { desc: "세 자리 − 세 자리 · 세로셈", gen: () => { let a, b; do { a = R(200, 999); b = R(100, a - 1); } while (borrowsSub(a, b) < 2); return V(a, b, "−", a - b, cogSub(a, b)); } },
+        { desc: "□ 찾기 (두 자리)", gen: () => { const a = R(30, 99), b = R(11, a - 10), t = R(0, 2); return blankP(a, "−", b, a - b, cogSub(a, b), oneDigit(t, [a, b, a - b][t])); } },
+        { desc: "몇백몇십 암산", gen: () => { const a = R(20, 99) * 10, b = R(11, a / 10 - 1) * 10; return H(`${a} − ${b}`, a - b, cogSub(a, b)); } },
+        { desc: "□ 찾기 (세 자리, 두 칸)", gen: () => twoBlank3("−") },
+    ],
+    mul: [
+        { desc: "2·5·10단", gen: () => { const a = pick([2, 5, 10]), b = R(1, 9); return H(`${a} × ${b}`, a * b, 3.5); } },
+        { desc: "구구단", gen: () => { const a = R(2, 9), b = R(2, 9); return H(`${a} × ${b}`, a * b, 3.5); } },
+        { desc: "몇십 × 몇", gen: () => { const a = R(2, 9) * 10, b = R(2, 9); return H(`${a} × ${b}`, a * b, 4.5); } },
+        { desc: "두 자리 × 한 자리 (쉬움) · 세로셈", gen: () => { const a = R(11, 49), b = R(2, 4); return V(a, b, "×", a * b, cogMul(a, b)); } },
+        { desc: "두 자리 × 한 자리 · 세로셈", gen: () => { const a = R(12, 99), b = R(3, 9); return V(a, b, "×", a * b, cogMul(a, b)); } },
+        { desc: "세 자리 × 한 자리 · 세로셈 💡", gen: () => { const a = R(100, 999), b = R(2, 9); return V(a, b, "×", a * b, cogMul(a, b), 1); } },
+        { desc: "세 자리 × 한 자리 · 세로셈", gen: () => { const a = R(100, 999), b = R(3, 9); return V(a, b, "×", a * b, cogMul(a, b)); } },
+        { desc: "□ 찾기 (두 자리 × 한 자리)", gen: () => { const a = R(12, 99), b = R(2, 9); return blankP(a, "×", b, a * b, cogMul(a, b), oneDigit(0, a)); } },
+        { desc: "몇십 × 두 자리 암산", gen: () => { const a = R(2, 9) * 10, b = R(11, 49); return H(`${a} × ${b}`, a * b, cogMul(b, a / 10) + 1.5); } },
+        { desc: "□ 찾기 (세 자리 × 한 자리)", gen: () => { const a = R(100, 999), b = R(2, 9); return blankP(a, "×", b, a * b, cogMul(a, b), oneDigit(0, a)); } },
+    ],
+    div: [
+        { desc: "똑같이 나누기", gen: () => { const b = pick([2, 5]), q = R(1, Math.floor(10 / b)); return H(`${b * q} ÷ ${b}`, q, 4); } },
+        { desc: "구구단 나눗셈", gen: () => { const b = R(2, 9), q = R(2, 9); return H(`${b * q} ÷ ${b}`, q, 4); } },
+        { desc: "몇십 ÷ 몇", gen: () => { const b = R(2, 9), q = R(2, 9) * 10; return H(`${b * q} ÷ ${b}`, q, 5); } },
+        { desc: "두 자리 ÷ 한 자리", gen: () => { const b = R(2, 9), q = R(10, Math.floor(99 / b)); return H(`${b * q} ÷ ${b}`, q, cogDiv(b, q)); } },
+        { desc: "□ 찾기 (구구단 나눗셈)", gen: () => {
+            const b = R(2, 9), q = R(2, 9), n = b * q;
+            return R(0, 1) ? blankP(n, "÷", b, q, 4, [[0, [...String(n)].map((_, i) => i)]]) : blankP(n, "÷", b, q, 4, [[1, [0]]]);
+        } },
+        { desc: "세 자리 ÷ 한 자리", gen: () => { const b = R(3, 9), q = R(Math.ceil(100 / b), Math.min(99, Math.floor(999 / b))); return H(`${b * q} ÷ ${b}`, q, cogDiv(b, q)); } },
+        { desc: "두 자리 ÷ 두 자리", gen: () => { const b = R(11, 49), q = R(2, Math.floor(99 / b)); return H(`${b * q} ÷ ${b}`, q, cogDiv(b, q)); } },
+        { desc: "괄호가 있는 계산", gen: () => pick([
+            () => { const a = R(2, 20), b = R(2, 20), c = R(2, 9); return H(`(${a} + ${b}) × ${c}`, (a + b) * c, cogAdd(a, b) + cogMul(a + b, c) + 2); },
+            () => { const a = R(2, 9), b = R(2, 9), c = R(1, a * b - 1); return H(`${a} × ${b} − ${c}`, a * b - c, 3.5 + cogSub(a * b, c) + 2); },
+            () => { const c = R(2, 9), q = R(2, 12), y = R(1, 30), x = y + c * q; return H(`(${x} − ${y}) ÷ ${c}`, q, cogSub(x, y) + cogDiv(c, q) + 2); },
+        ])() },
+        { desc: "세 자리 ÷ 두 자리", gen: () => { const b = R(12, 99), q = R(Math.ceil(100 / b), 9); return H(`${b * q} ÷ ${b}`, q, cogDiv(b, q) + 2); } },
+        { desc: "혼합 계산", gen: () => pick([
+            () => { const a = R(10, 49), b = R(10, 49), c = R(2, 5); return H(`(${a} + ${b}) × ${c}`, (a + b) * c, cogAdd(a, b) + cogMul(a + b, c) + 2); },
+            () => { const a = R(11, 30), b = R(2, 5), c = R(11, 30), d = R(2, 5); return H(`${a} × ${b} + ${c} × ${d}`, a * b + c * d, cogMul(a, b) + cogMul(c, d) + cogAdd(a * b, c * d) + 2); },
+            () => { const c = R(3, 9), q = R(5, 15), y = R(10, 60), x = y + c * q; return H(`(${x} − ${y}) ÷ ${c}`, q, cogSub(x, y) + cogDiv(c, q) + 2); },
+        ])() },
+    ],
+};
 
-        function generateCarryAddition() {
-            const a = Math.floor(Math.random() * 9) + 1;
-            const b = Math.floor(Math.random() * (10 - a)) + (10 - a);
-            return { question: `${a} + ${b}`, answer: a + b };
-        }
+/* =========================================================================
+   스테이지 (몬스터 · 배경). 능력치는 monStats()가 정함
+   ========================================================================= */
+const STAGES = [
+    { name: "슬라임",    kind: "slime",  place: "푸른 초원",   c: ["#4ade80", "#15803d", "#bbf7d0"], sky: ["#7dd3fc", "#e0f2fe"], g: "#65a30d" },
+    { name: "동굴 박쥐", kind: "bat",    place: "어두운 동굴", c: ["#a78bfa", "#5b21b6", "#ddd6fe"], sky: ["#1e1b4b", "#4338ca"], g: "#44403c", night: true },
+    { name: "독버섯",    kind: "mush",   place: "버섯 숲",     c: ["#f87171", "#b91c1c", "#fecaca"], sky: ["#86efac", "#f0fdf4"], g: "#3f6212" },
+    { name: "늑대",      kind: "wolf",   place: "달빛 언덕",   c: ["#94a3b8", "#334155", "#e2e8f0"], sky: ["#1e3a8a", "#60a5fa"], g: "#166534", night: true },
+    { name: "골렘",      kind: "golem",  place: "바위 산",     c: ["#a8a29e", "#57534e", "#e7e5e4"], sky: ["#fbbf24", "#fef3c7"], g: "#a16207" },
+    { name: "마법사",    kind: "wizard", place: "마법 탑",     c: ["#818cf8", "#3730a3", "#c7d2fe"], sky: ["#6d28d9", "#c4b5fd"], g: "#4c1d95", night: true },
+    { name: "드래곤",    kind: "dragon", place: "불꽃 화산",   c: ["#ef4444", "#991b1b", "#fde68a"], sky: ["#ea580c", "#fde68a"], g: "#7c2d12" },
+    { name: "도깨비",    kind: "goblin", place: "도깨비 마을", c: ["#f472b6", "#9d174d", "#fce7f3"], sky: ["#be185d", "#fbcfe8"], g: "#831843" },
+    { name: "거대 거미", kind: "spider", place: "거미줄 숲",   c: ["#4b5563", "#111827", "#9ca3af"], sky: ["#1f2937", "#6b7280"], g: "#14532d", night: true },
+    { name: "마왕",      kind: "king",   place: "마왕성",      c: ["#7c3aed", "#2e1065", "#ddd6fe"], sky: ["#0f0a1e", "#6d28d9"], g: "#1e1b4b", night: true },
+];
 
-        function generateTwoDigitAddSub() {
-            const a = Math.floor(Math.random() * 90) + 10;
-            const b = Math.floor(Math.random() * 90) + 10;
-            const operation = Math.random() < 0.5 ? '+' : '-';
-            
-            if (operation === '+') {
-                return { question: `${a} + ${b}`, answer: a + b };
-            } else {
-                const larger = Math.max(a, b);
-                const smaller = Math.min(a, b);
-                return { question: `${larger} - ${smaller}`, answer: larger - smaller };
-            }
-        }
+/* =========================================================================
+   상점 (영구 성장)
+   ========================================================================= */
+const SHOP = [
+    { id: "atk",   icon: "⚔️", name: "공격력",      max: 15, per: "공격력 +4",               price: l => 80 + 60 * l },
+    { id: "hp",    icon: "❤️", name: "최대 체력",   max: 15, per: "최대 체력 +20",           price: l => 80 + 60 * l },
+    { id: "def",   icon: "🛡️", name: "방어력",      max: 10, per: "받는 피해 -2",            price: l => 100 + 70 * l },
+    { id: "crit",  icon: "💥", name: "크리티컬 위력", max: 10, per: "크리티컬 데미지 +10%",   price: l => 100 + 70 * l },
+    { id: "time",  icon: "⏰", name: "생각할 시간",  max: 10, per: "문제마다 +0.5초",         price: l => 120 + 80 * l },
+    { id: "gift",  icon: "🎁", name: "출발 선물",    max: 1,  per: "모험 시작 때 희귀 보상 1개", price: () => 400 },
+];
+const shopValue = {
+    atk: l => `${20 + l * 4}`, hp: l => `${100 + l * 20}`, def: l => `${l * 2}`,
+    crit: l => `×${(1.5 + l * .1).toFixed(1)}`, time: l => `+${(l * .5).toFixed(1)}초`, gift: l => (l ? "있음" : "없음"),
+};
 
-        function generateMultiplyDivide() {
-            if (Math.random() < 0.6) {
-                const a = Math.floor(Math.random() * 9) + 2;
-                const b = Math.floor(Math.random() * 9) + 2;
-                return { question: `${a} × ${b}`, answer: a * b };
-            } else {
-                const b = Math.floor(Math.random() * 9) + 2;
-                const answer = Math.floor(Math.random() * 9) + 2;
-                const a = b * answer;
-                return { question: `${a} ÷ ${b}`, answer: answer };
-            }
-        }
+/* =========================================================================
+   인게임 보상 (한 판 동안만)
+   ========================================================================= */
+const REWARDS = {
+    common: [
+        { icon: "🍎", name: "사과",         desc: "체력 30% 회복",        apply: r => heal(r, Math.round(r.maxHp * .3)) },
+        { icon: "⚔️", name: "날카로운 칼",   desc: "공격력 +4",            apply: r => { r.atk += 4; } },
+        { icon: "⏰", name: "모래시계",      desc: "문제마다 시간 +1초",    apply: r => { r.timeBonus += 1; } },
+        { icon: "🛡️", name: "튼튼한 방패",   desc: "받는 피해 -2",         apply: r => { r.def += 2; } },
+        { icon: "🪙", name: "코인 주머니",   desc: r => `코인 +${20 + r.stage * 5}`, apply: r => { r.bonusCoins += 20 + r.stage * 5; } },
+    ],
+    rare: [
+        { icon: "🔰", name: "괜찮아 부적",   desc: "틀려도 1번은 턴이 안 끝나요", apply: r => { r.guard++; } },
+        { icon: "🫧", name: "보호막",        desc: "몬스터 공격 1번 막기",   apply: r => { r.shield++; } },
+        { icon: "🧛", name: "생명의 연필",   desc: "정답마다 체력 +3",       apply: r => { r.vamp += 3; } },
+        { icon: "💥", name: "필살 연습",     desc: "크리티컬 위력 +50%",     apply: r => { r.critMult += .5; } },
+        { icon: "🍯", name: "꿀단지",        desc: "체력 모두 회복",         apply: r => heal(r, r.maxHp) },
+        { icon: "💡", name: "힌트 돋보기",   desc: "세 자리 이상 답은 첫 자리를 알려줘요", apply: r => { r.hintBoost = true; }, once: r => r.hintBoost },
+        { icon: "💰", name: "보물 상자",     desc: r => `코인 +${60 + r.stage * 10}`, apply: r => { r.bonusCoins += 60 + r.stage * 10; } },
+    ],
+    legend: [
+        { icon: "🔥", name: "불꽃 콤보",     desc: "3콤보마다 데미지 ×2",    apply: r => { r.combo3 = true; }, once: r => r.combo3 },
+        { icon: "🪞", name: "거울 방패",     desc: "몬스터 공격 1번 되돌려주기", apply: r => { r.reflect++; } },
+        { icon: "🍀", name: "네잎클로버",    desc: "크리티컬까지 1번 덜 맞혀도 돼요", apply: r => { r.hitsNeeded = Math.max(3, r.hitsNeeded - 1); }, once: r => r.hitsNeeded <= 3 },
+        { icon: "⏸️", name: "시간 멈춤",     desc: "시간이 다 되면 +5초 (2번)", apply: r => { r.freeze += 2; } },
+        { icon: "🗡️", name: "전설의 검",     desc: "공격력 ×1.3",            apply: r => { r.atk = Math.round(r.atk * 1.3); } },
+    ],
+};
+const RARITY_NAME = { common: "일반", rare: "희귀", legend: "전설" };
+const descOf = (rw, r) => typeof rw.desc === "function" ? rw.desc(r) : rw.desc;
+function rollReward(r, risk, minRarity) {
+    let rar = "common";
+    const x = Math.random();
+    if (x < Math.min(.35, .04 + .06 * risk)) rar = "legend";
+    else if (x < Math.min(.75, .24 + .1 * risk)) rar = "rare";
+    if (minRarity === "rare" && rar === "common") rar = "rare";
+    const pool = REWARDS[rar].filter(rw => !(rw.once && rw.once(r)));
+    return { rar, rw: pick(pool.length ? pool : REWARDS.common) };
+}
+function heal(r, n) { r.hp = Math.min(r.maxHp, r.hp + n); }
 
-        function generateThreeDigitAddSub() {
-            const a = Math.floor(Math.random() * 900) + 100;
-            const b = Math.floor(Math.random() * 900) + 100;
-            const operation = Math.random() < 0.5 ? '+' : '-';
-            
-            if (operation === '+') {
-                return { question: `${a} + ${b}`, answer: a + b };
-            } else {
-                const larger = Math.max(a, b);
-                const smaller = Math.min(a, b);
-                return { question: `${larger} - ${smaller}`, answer: larger - smaller };
-            }
-        }
+/* =========================================================================
+   그림 (SVG)
+   ========================================================================= */
+const mirror = (s) => s + `<g transform="matrix(-1 0 0 1 140 0)">${s}</g>`;
+function eye(x, y, r, side, angry) {
+    let s = `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 1.15}" fill="#fff"/>
+             <circle cx="${x - r * .2}" cy="${y + r * .15}" r="${r * .58}" fill="#1f2937"/>
+             <circle cx="${x - r * .4}" cy="${y - r * .15}" r="${r * .22}" fill="#fff"/>`;
+    if (angry) {
+        const [y1, y2] = side < 0 ? [y - r * 1.7, y - r * 1.05] : [y - r * 1.05, y - r * 1.7];
+        s += `<path d="M${x - r * 1.1} ${y1} L${x + r * 1.1} ${y2}" stroke="#1f2937" stroke-width="${r * .45}" stroke-linecap="round"/>`;
+    }
+    return s;
+}
+const eyes = (x1, x2, y, r, angry) => eye(x1, y, r, -1, angry) + eye(x2, y, r, 1, angry);
+const shadow = `<ellipse cx="70" cy="128" rx="44" ry="7" fill="rgba(0,0,0,.22)"/>`;
+const fangs = (y) => `<path d="M61 ${y} l3 7 l3 -7 Z M73 ${y} l3 7 l3 -7 Z" fill="#fff"/>`;
 
-        function generateTwoDigitMultiply() {
-            const a = Math.floor(Math.random() * 90) + 10;
-            const b = Math.floor(Math.random() * 9) + 2;
-            return { question: `${a} × ${b}`, answer: a * b };
-        }
+const SVG = {
+    hero: () => `<svg viewBox="0 0 120 120">
+        <ellipse cx="60" cy="112" rx="30" ry="6" fill="rgba(0,0,0,.22)"/>
+        <path d="M42 70 Q30 100 36 108 L84 108 Q90 100 78 70 Z" fill="#e5484d"/>
+        <rect x="47" y="95" width="10" height="14" rx="4" fill="#5b3a1e"/><rect x="63" y="95" width="10" height="14" rx="4" fill="#5b3a1e"/>
+        <rect x="42" y="68" width="36" height="34" rx="13" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+        <rect x="43" y="85" width="34" height="5" fill="#f5c542"/>
+        <g transform="rotate(-38 88 86)">
+            <rect x="85" y="38" width="8" height="42" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+            <rect x="79" y="78" width="20" height="6" rx="3" fill="#f5c542" stroke="#b45309" stroke-width="1.5"/>
+            <rect x="85" y="84" width="8" height="11" rx="2" fill="#7c4a1e"/>
+        </g>
+        <circle cx="39" cy="86" r="13" fill="#f5c542" stroke="#b45309" stroke-width="3"/>
+        <path d="M39 78 V94 M31 86 H47" stroke="#b45309" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="60" cy="48" r="26" fill="#ffdcb5"/>
+        <path d="M33 48 Q33 20 60 20 Q87 20 87 48 L80 47 Q78 33 60 33 Q42 33 40 47 Z" fill="#cbd5e1" stroke="#94a3b8" stroke-width="2"/>
+        <path d="M60 21 Q68 2 86 8 Q72 12 66 23 Z" fill="#e5484d"/>
+        <ellipse cx="51" cy="52" rx="4" ry="5" fill="#1f2937"/><circle cx="52.5" cy="50" r="1.6" fill="#fff"/>
+        <ellipse cx="69" cy="52" rx="4" ry="5" fill="#1f2937"/><circle cx="70.5" cy="50" r="1.6" fill="#fff"/>
+        <circle cx="44" cy="60" r="4.5" fill="#fca5a5" opacity=".75"/><circle cx="76" cy="60" r="4.5" fill="#fca5a5" opacity=".75"/>
+        <path d="M54 62 Q60 68 66 62" stroke="#7c2d12" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>`,
 
-        function generateComplexDivide() {
-            const b = Math.floor(Math.random() * 20) + 5;
-            const answer = Math.floor(Math.random() * 20) + 5;
-            const a = b * answer;
-            return { question: `${a} ÷ ${b}`, answer: answer };
-        }
+    slime: ([m, d, l]) => `${shadow}
+        <path d="M22 124 Q12 124 17 102 Q28 44 70 40 Q112 44 123 102 Q128 124 118 124 Z" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <ellipse cx="46" cy="64" rx="11" ry="6" fill="#fff" opacity=".55" transform="rotate(-32 46 64)"/>
+        ${eyes(55, 86, 86, 8)}
+        <path d="M62 104 Q70 111 78 104" stroke="${d}" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <circle cx="44" cy="100" r="5" fill="#fda4af" opacity=".6"/><circle cx="96" cy="100" r="5" fill="#fda4af" opacity=".6"/>`,
 
-        function generateMixedProblems() {
-            const operations = [generateThreeDigitAddSub, generateTwoDigitMultiply, generateComplexDivide];
-            const selectedOp = operations[Math.floor(Math.random() * operations.length)];
-            return selectedOp();
-        }
+    bat: ([m, d, l]) => `${shadow}
+        ${mirror(`<path d="M48 82 Q20 46 4 70 Q18 74 14 90 Q26 84 30 100 Q40 88 52 98 Z" fill="${d}"/>`)}
+        ${mirror(`<path d="M50 64 L42 34 L64 56 Z" fill="${m}" stroke="${d}" stroke-width="2"/>`)}
+        <circle cx="70" cy="86" r="32" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <ellipse cx="70" cy="98" rx="16" ry="12" fill="${l}"/>
+        ${eyes(58, 82, 80, 7)}
+        <path d="M58 100 Q70 106 82 100" stroke="${d}" stroke-width="3" fill="none" stroke-linecap="round"/>${fangs(101)}`,
 
-        function startTimer() {
-            document.getElementById('timer').textContent = battleTimer;
-            
-            timerInterval = setInterval(() => {
-                battleTimer--;
-                document.getElementById('timer').textContent = battleTimer;
-                
-                if (battleTimer <= 0) {
-                    clearInterval(timerInterval);
-                    endPlayerTurn();
-                }
-            }, 1000);
-        }
+    mush: ([m, d, l]) => `${shadow}
+        <path d="M44 80 Q38 124 50 124 L90 124 Q102 124 96 80 Z" fill="#fde7c7" stroke="#c9a26b" stroke-width="3"/>
+        <path d="M12 86 Q16 24 70 20 Q124 24 128 86 Q70 98 12 86 Z" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <circle cx="40" cy="54" r="9" fill="#fff"/><circle cx="74" cy="38" r="11" fill="#fff"/><circle cx="104" cy="60" r="8" fill="#fff"/><circle cx="62" cy="70" r="6" fill="#fff"/>
+        ${eyes(58, 82, 102, 6, true)}
+        <path d="M63 116 Q70 112 77 116" stroke="#92400e" stroke-width="3" fill="none" stroke-linecap="round"/>`,
 
-        function submitAnswer() {
-            console.log('Submit answer clicked');
-            const userAnswer = parseInt(document.getElementById('answer-input').value);
-            
-            if (isNaN(userAnswer)) {
-                console.log('Invalid input, focusing on input field');
-                document.getElementById('answer-input').focus();
-                return;
-            }
-            
-            console.log('User answer:', userAnswer, 'Correct answer:', currentProblem.answer);
-            
-            if (userAnswer === currentProblem.answer) {
-                correctAnswers++;
-                comboCount++;
-                
-                // 콤보 표시 업데이트
-                updateComboDisplay();
-                
-                // 정답과 데미지를 함께 표시
-                if (correctAnswers === 5) {
-                    performCriticalAttack();
-                    showFeedback(`정답! 크리티컬 ${player.critical} 데미지!`, 'critical');
-                } else {
-                    performNormalAttack();
-                    showFeedback(`정답! ${player.attack} 데미지!`, 'correct');
-                }
-                
-                if (currentMonster.hp <= 0) {
-                    clearInterval(timerInterval);
-                    showVictorySequence();
-                    return;
-                } else if (correctAnswers < 5) {
-                    setTimeout(() => {
-                        generateProblem();
-                    }, 1500);
-                } else {
-                    clearInterval(timerInterval);
-                    setTimeout(() => {
-                        endPlayerTurn();
-                    }, 1500);
-                }
-            } else {
-                // 오답 - 콤보 리셋 (이미 endPlayerTurn에서 처리됨)
-                showFeedback('틀렸습니다!', 'incorrect');
-                clearInterval(timerInterval);
-                battleTimer = 0;
-                document.getElementById('timer').textContent = '0';
-                setTimeout(() => {
-                    endPlayerTurn();
-                }, 1500);
-            }
-        }
+    wolf: ([m, d, l]) => `${shadow}
+        ${mirror(`<path d="M36 72 L32 20 L68 52 Z" fill="${d}"/><path d="M40 64 L38 34 L58 52 Z" fill="#fda4af"/>`)}
+        <ellipse cx="70" cy="86" rx="48" ry="40" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <ellipse cx="70" cy="104" rx="27" ry="20" fill="${l}"/>
+        ${eyes(50, 90, 78, 7.5, true)}
+        <ellipse cx="70" cy="94" rx="8" ry="6" fill="#1f2937"/>
+        <path d="M60 106 Q70 114 80 106" stroke="#1f2937" stroke-width="3" fill="none" stroke-linecap="round"/>${fangs(108)}`,
 
-        function performNormalAttack() {
-            const damage = player.attack;
-            currentMonster.hp = Math.max(0, currentMonster.hp - damage);
-            updateHealthBars();
-        }
+    golem: ([m, d, l]) => `${shadow}
+        ${mirror(`<rect x="4" y="68" width="24" height="44" rx="10" fill="${d}"/>`)}
+        <rect x="22" y="38" width="96" height="88" rx="20" fill="${m}" stroke="${d}" stroke-width="4"/>
+        <path d="M30 44 Q50 32 70 42 Q90 32 110 44" stroke="#4ade80" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <path d="M40 54 L48 66 L42 76" stroke="${d}" stroke-width="3" fill="none"/><path d="M102 96 L94 106 L100 116" stroke="${d}" stroke-width="3" fill="none"/>
+        <rect x="42" y="70" width="18" height="10" rx="4" fill="#5eead4"/><rect x="80" y="70" width="18" height="10" rx="4" fill="#5eead4"/>
+        <rect x="56" y="96" width="28" height="6" rx="3" fill="${d}"/>`,
 
-        function performCriticalAttack() {
-            const damage = player.critical;
-            currentMonster.hp = Math.max(0, currentMonster.hp - damage);
-            updateHealthBars();
-        }
+    wizard: ([m, d, l]) => `${shadow}
+        <rect x="112" y="40" width="6" height="86" rx="3" fill="#92400e"/><circle cx="115" cy="38" r="10" fill="#facc15" stroke="#b45309" stroke-width="2"/>
+        <path d="M30 126 L46 72 L94 72 L110 126 Z" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <circle cx="70" cy="76" r="24" fill="#1e1b4b"/>
+        <ellipse cx="60" cy="78" rx="5" ry="6" fill="#fde047"/><ellipse cx="80" cy="78" rx="5" ry="6" fill="#fde047"/>
+        <path d="M34 66 L70 4 L106 66 Z" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <ellipse cx="70" cy="64" rx="42" ry="9" fill="${d}"/>
+        <path d="M70 26 l4 8 9 1 -7 6 2 9 -8 -5 -8 5 2 -9 -7 -6 9 -1 Z" fill="#fde047"/>`,
 
-        function updateComboDisplay() {
-            const comboDisplay = document.getElementById('combo-display');
-            if (comboDisplay) {
-                if (comboCount >= 2) {
-                    comboDisplay.textContent = `${comboCount} COMBO!`;
-                    comboDisplay.style.display = 'block';
-                    comboDisplay.classList.add('show');
-                } else {
-                    comboDisplay.style.display = 'none';
-                    comboDisplay.classList.remove('show');
-                }
-            }
-        }
+    dragon: ([m, d, l]) => `${shadow}
+        ${mirror(`<path d="M42 72 Q6 36 8 84 Q22 78 28 96 Z" fill="${d}"/>`)}
+        ${mirror(`<path d="M48 60 Q38 34 52 26 Q50 46 60 56 Z" fill="${l}" stroke="#b45309" stroke-width="2"/>`)}
+        <ellipse cx="70" cy="90" rx="42" ry="36" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <ellipse cx="70" cy="104" rx="23" ry="20" fill="${l}"/>
+        ${eyes(54, 86, 80, 7.5, true)}
+        <circle cx="64" cy="94" r="2" fill="${d}"/><circle cx="76" cy="94" r="2" fill="${d}"/>
+        <path d="M56 104 Q70 112 84 104" stroke="${d}" stroke-width="3" fill="none" stroke-linecap="round"/>${fangs(106)}`,
 
-        function showDamage(damage, isCritical) {
-            const monsterElement = document.getElementById('monster-name-battle');
-            if (isCritical) {
-                monsterElement.classList.add('critical-animation');
-                showFeedback(`크리티컬! ${damage} 데미지!`, 'critical');
-                setTimeout(() => monsterElement.classList.remove('critical-animation'), 800);
-            } else {
-                monsterElement.classList.add('damage-animation');
-                showFeedback(`${damage} 데미지!`, 'correct');
-                setTimeout(() => monsterElement.classList.remove('damage-animation'), 500);
-            }
-        }
+    goblin: ([m, d, l]) => `${shadow}
+        ${mirror(`<path d="M44 54 Q34 26 52 18 Q50 38 60 48 Z" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>`)}
+        <circle cx="70" cy="86" r="42" fill="${m}" stroke="${d}" stroke-width="3"/>
+        ${eyes(54, 86, 78, 8, true)}
+        <path d="M46 98 Q70 122 94 98 Z" fill="#7f1d1d"/>
+        <path d="M54 100 l4 8 4 -8 Z M78 100 l4 8 4 -8 Z" fill="#fff"/>
+        <circle cx="40" cy="94" r="6" fill="#fda4af" opacity=".6"/><circle cx="100" cy="94" r="6" fill="#fda4af" opacity=".6"/>`,
 
-        function showFeedback(text, type) {
-            const feedback = document.getElementById('feedback');
-            feedback.setAttribute('data-text', text);
-            feedback.className = `feedback-overlay ${type} show`;
-            
-            // 체력바를 피드백 위에 보이도록 z-index 조정
-            const healthBars = document.querySelectorAll('.health-bar, .health-fill, .health-text');
-            healthBars.forEach(bar => {
-                bar.style.zIndex = '2500';
-                bar.style.position = 'relative';
-            });
-            
-            setTimeout(() => {
-                feedback.classList.remove('show');
-                // z-index 원복
-                healthBars.forEach(bar => {
-                    bar.style.zIndex = '';
-                    bar.style.position = '';
-                });
-            }, 1500);
-        }
+    spider: ([m, d, l]) => `${shadow}
+        ${mirror(`<path d="M50 84 Q24 62 8 82" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/>
+                  <path d="M48 92 Q20 84 6 104" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/>
+                  <path d="M50 100 Q26 104 16 124" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/>
+                  <path d="M56 106 Q40 116 36 128" stroke="${d}" stroke-width="5" fill="none" stroke-linecap="round"/>`)}
+        <circle cx="70" cy="88" r="34" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <path d="M58 66 Q70 58 82 66 L70 80 Z" fill="#dc2626" opacity=".8"/>
+        <circle cx="58" cy="86" r="7" fill="#ef4444"/><circle cx="82" cy="86" r="7" fill="#ef4444"/>
+        <circle cx="56" cy="84" r="2.4" fill="#fff"/><circle cx="80" cy="84" r="2.4" fill="#fff"/>
+        <circle cx="64" cy="76" r="3.5" fill="#ef4444"/><circle cx="76" cy="76" r="3.5" fill="#ef4444"/>
+        <path d="M62 102 l3 8 3 -8 Z M72 102 l3 8 3 -8 Z" fill="#e5e7eb"/>`,
 
-        function updateHealthBars() {
-            // 몬스터 체력바
-            const monsterStage = stageData[currentStage - 1];
-            const monsterHpPercent = (currentMonster.hp / monsterStage.hp) * 100;
-            document.getElementById('monster-health-bar').style.width = monsterHpPercent + '%';
-            document.getElementById('monster-health-text').textContent = `${currentMonster.hp}/${monsterStage.hp}`;
-            
-            // 플레이어 체력바
-            const playerHpPercent = (player.hp / player.maxHp) * 100;
-            document.getElementById('player-health-bar').style.width = playerHpPercent + '%';
-            document.getElementById('player-health-text').textContent = `${player.hp}/${player.maxHp}`;
-        }
+    king: ([m, d, l]) => `${shadow}
+        <path d="M22 126 Q28 62 70 58 Q112 62 118 126 Z" fill="#991b1b" stroke="#450a0a" stroke-width="3"/>
+        ${mirror(`<path d="M40 62 Q26 40 34 26 Q40 44 52 52 Z" fill="#1f2937"/>`)}
+        <circle cx="70" cy="84" r="34" fill="${m}" stroke="${d}" stroke-width="3"/>
+        <path d="M42 58 L46 30 L58 46 L70 24 L82 46 L94 30 L98 58 Z" fill="#facc15" stroke="#b45309" stroke-width="3"/>
+        <circle cx="70" cy="44" r="4" fill="#ef4444"/><circle cx="54" cy="50" r="3" fill="#22d3ee"/><circle cx="86" cy="50" r="3" fill="#22d3ee"/>
+        <ellipse cx="57" cy="82" rx="7" ry="5" fill="#f87171"/><ellipse cx="83" cy="82" rx="7" ry="5" fill="#f87171"/>
+        <path d="M49 74 L64 78 M91 74 L76 78" stroke="#1f2937" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M56 98 Q70 106 84 96" stroke="#1f2937" stroke-width="3" fill="none" stroke-linecap="round"/>${fangs(99)}`,
+};
+const monsterSVG = (stage) => `<svg viewBox="0 0 140 140">${SVG[stage.kind](stage.c)}</svg>`;
+function sceneHTML(stage) {
+    return `<div class="sky${stage.night ? " night" : ""}" style="--s1:${stage.sky[0]};--s2:${stage.sky[1]};--g:${stage.g}">
+        <div class="orb ${stage.night ? "moon" : "sun"}"></div>
+        <div class="cloud c1"></div><div class="cloud c2"></div>
+        <div class="hill h1"></div><div class="hill h2"></div>
+        <div class="ground"></div>
+    </div>`;
+}
 
-        function endPlayerTurn() {
-            playerTurn = false;
-            // 시간 초과 또는 오답으로 턴이 끝나면 콤보 리셋
-            comboCount = 0;
-            updateComboDisplay();
-            
-            const turnDisplay = document.getElementById('turn-display');
-            if (turnDisplay) turnDisplay.textContent = '몬스터';
-            
-            showTurnChangeOverlay();
-            
-            setTimeout(() => {
-                hideTurnChangeOverlay();
-                performMonsterAttack();
-            }, 2000);
-        }
+/* =========================================================================
+   소리 (Web Audio로 직접 합성)
+   ========================================================================= */
+const Sfx = {
+    ctx: null, muted: false,
+    unlock() {
+        if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } }
+        if (this.ctx.state === "suspended") this.ctx.resume();
+    },
+    tone(f, d = .12, type = "sine", v = .14, f2 = null, delay = 0) {
+        if (this.muted || !this.ctx) return;
+        const t = this.ctx.currentTime + delay;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(f, t);
+        if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+        g.gain.setValueAtTime(v, t);
+        g.gain.exponentialRampToValueAtTime(.001, t + d);
+        o.connect(g).connect(this.ctx.destination);
+        o.start(t); o.stop(t + d + .02);
+    },
+    key()     { this.tone(700, .05, "triangle", .07); },
+    correct() { this.tone(660, .1, "triangle", .14); this.tone(990, .16, "triangle", .14, null, .08); },
+    wrong()   { this.tone(240, .3, "sawtooth", .07, 150); },
+    hit()     { this.tone(320, .14, "square", .08, 90); },
+    crit()    { this.tone(200, .3, "sawtooth", .1, 60); [784, 988, 1319].forEach((f, i) => this.tone(f, .14, "triangle", .12, null, .05 + i * .07)); },
+    hurt()    { this.tone(170, .28, "sawtooth", .11, 60); },
+    block()   { this.tone(1200, .2, "triangle", .1, 600); },
+    turn()    { this.tone(523, .09, "triangle", .1); this.tone(784, .12, "triangle", .1, null, .09); },
+    tick()    { this.tone(1000, .04, "sine", .05); },
+    coin()    { this.tone(988, .08, "square", .06); this.tone(1319, .18, "square", .06, null, .07); },
+    win()     { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, .2, "triangle", .14, null, i * .12)); },
+    rest()    { [523, 440, 392, 523].forEach((f, i) => this.tone(f, .22, "triangle", .1, null, i * .16)); },
+};
+document.addEventListener("pointerdown", () => Sfx.unlock(), { capture: true });
 
-        function showTurnChangeOverlay() {
-            const overlay = document.getElementById('turn-change-overlay');
-            const text = document.getElementById('turn-change-text');
-            if (overlay && text) {
-                text.textContent = '몬스터 턴!';
-                text.style.color = '#FF5722';
-                text.style.borderColor = '#FF5722';
-                overlay.classList.add('show');
-            }
-        }
+/* =========================================================================
+   저장
+   ========================================================================= */
+const SAVE_KEY = "mathrpg-v3";
+const defaultSave = () => ({
+    grade: null, coins: 0, muted: false,
+    shop: { atk: 0, hp: 0, def: 0, crit: 0, time: 0, gift: 0 },
+    cycleUnlocked: 1, cycle: 1,
+    records: {},   // 학년별 { best, bestStage, clears, stageBest: {스테이지: 점수} }
+});
+let save = defaultSave();
+try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (s) save = { ...save, ...s, shop: { ...save.shop, ...(s.shop || {}) } };
+} catch (e) { /* 저장 못 읽으면 새로 시작 */ }
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 무시 */ } }
+const rec = (g = save.grade) => (save.records[g] ||= { best: 0, bestStage: 0, clears: 0, stageBest: {} });
+Sfx.muted = !!save.muted;
 
-        function hideTurnChangeOverlay() {
-            const overlay = document.getElementById('turn-change-overlay');
-            if (overlay) {
-                overlay.classList.remove('show');
-            }
-        }
+/* =========================================================================
+   공용
+   ========================================================================= */
+function show(id) { document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id)); }
+function play(el, cls, ms) {
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), ms);
+}
+let toastTimer;
+function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("on");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), 1700);
+}
+function confirmBox(text, yes = "네", no = "아니요") {
+    return new Promise(res => {
+        $("modalText").textContent = text; $("modalYes").textContent = yes; $("modalNo").textContent = no;
+        $("modal").classList.add("on");
+        const done = (v) => { $("modal").classList.remove("on"); $("modalYes").onclick = $("modalNo").onclick = null; res(v); };
+        $("modalYes").onclick = () => done(true); $("modalNo").onclick = () => done(false);
+    });
+}
+function syncSoundButtons() { document.querySelectorAll("[data-sound]").forEach(b => b.textContent = Sfx.muted ? "🔇" : "🔊"); }
+document.querySelectorAll("[data-sound]").forEach(b => b.addEventListener("click", () => {
+    Sfx.muted = !Sfx.muted; save.muted = Sfx.muted; persist(); syncSoundButtons(); Sfx.key();
+}));
+document.querySelectorAll("[data-svg]").forEach(el => { el.innerHTML = el.dataset.svg === "hero" ? SVG.hero() : monsterSVG(STAGES[0]); });
+function jo(word, withB, withoutB) {   // 받침에 맞는 조사: jo("슬라임", "을", "를") → "슬라임을"
+    const c = word.charCodeAt(word.length - 1);
+    const hasB = c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 > 0;
+    return word + (hasB ? withB : withoutB);
+}
+function vibrate(ms) {
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+    try { navigator.vibrate && navigator.vibrate(ms); } catch (e) { /* 무시 */ }
+}
+function openSheet(html) { $("sheetBody").innerHTML = html; $("sheet").classList.add("on"); }
+function closeSheet() { $("sheet").classList.remove("on"); }
+$("sheet").addEventListener("click", (e) => { if (e.target.id === "sheet" || e.target.closest("[data-close]")) closeSheet(); });
 
-        function showVictorySequence() {
-            // 스테이지 클리어 시 콤보 리셋
-            comboCount = 0;
-            updateComboDisplay();
-            
-            // 몬스터 처치 연출
-            const monsterSprite = document.getElementById('monster-sprite');
-            if (monsterSprite) {
-                monsterSprite.style.animation = 'shake 0.5s ease-in-out';
-                setTimeout(() => {
-                    monsterSprite.style.opacity = '0.3';
-                    monsterSprite.style.transform = 'scale(0.8)';
-                }, 500);
-            }
-            
-            // 승리 오버레이 표시
-            setTimeout(() => {
-                const victoryOverlay = document.getElementById('victory-overlay');
-                if (victoryOverlay) {
-                    victoryOverlay.classList.add('show');
-                }
-            }, 1000);
-            
-            // 결과 화면으로 이동
-            setTimeout(() => {
-                const victoryOverlay = document.getElementById('victory-overlay');
-                if (victoryOverlay) {
-                    victoryOverlay.classList.remove('show');
-                }
-                showVictory();
-            }, 3000);
-        }
+/* =========================================================================
+   타이틀
+   ========================================================================= */
+function showTitle() {
+    document.querySelector("#scr-title .scene-bg").innerHTML = sceneHTML(STAGES[0]);
+    const g = save.grade;
+    $("btnGrade").innerHTML = g == null ? `🎒 학년을 골라요 <small>▸</small>` : `${GRADES[g].icon} ${GRADES[g].short} <small>바꾸기 ▸</small>`;
+    $("titleCoins").textContent = `🪙 ${fmt(save.coins)}`;
+    const r = g == null ? null : rec(g);
+    $("titleRecord").textContent = r && r.best ? `최고 기록: ${r.bestStage}스테이지 · ${fmt(r.best)}점${r.clears ? ` · 엔딩 ${r.clears}번` : ""}` : "용사님, 몬스터들이 나타났어요!";
+    save.cycle = Math.min(save.cycle || 1, save.cycleUnlocked);
+    $("cyclePick").hidden = save.cycleUnlocked < 2;
+    $("cycleText").textContent = `${save.cycle}회차`;
+    $("cycleDown").disabled = save.cycle <= 1;
+    $("cycleUp").disabled = save.cycle >= save.cycleUnlocked;
+    show("scr-title");
+}
+$("cycleDown").onclick = () => { save.cycle--; persist(); Sfx.key(); showTitle(); };
+$("cycleUp").onclick = () => { save.cycle++; persist(); Sfx.key(); showTitle(); };
+$("btnStart").onclick = () => {
+    Sfx.turn();
+    if (save.grade == null) { showGrade(true); return; }
+    startRun();
+};
+$("btnGrade").onclick = () => { Sfx.key(); showGrade(false); };
+$("btnShop").onclick = () => { Sfx.key(); showShop(); };
+$("btnRecords").onclick = () => {
+    Sfx.key();
+    if (save.grade == null) { toast("먼저 학년을 골라요!"); return; }
+    const r = rec();
+    openSheet(`<h3>📊 ${GRADES[save.grade].short} 기록</h3>
+        <div class="sub">최고 ${fmt(r.best)}점 · 최고 ${r.bestStage}스테이지 · 엔딩 ${r.clears}번</div>
+        <div class="rec-rows">${STAGES.map((s, i) => {
+            const v = r.stageBest[i + 1];
+            return `<div class="rec-row${v ? "" : " none"}">${monsterSVG(s)}<span>${i + 1}. ${s.name}</span><b>${v ? fmt(v) + "점" : "-"}</b></div>`;
+        }).join("")}</div>
+        <button class="btn gray" data-close>닫기</button>`);
+};
 
-        function performMonsterAttack() {
-            if (player.shield > 0) {
-                player.shield--;
-                showFeedback('공격 차단!', 'correct');
-            } else {
-                const damage = Math.max(1, currentMonster.attack - player.defense);
-                player.hp = Math.max(0, player.hp - damage);
-                
-                // RPG 스타일 데미지 연출
-                showDamageEffect();
-                showFeedback(`${damage} 데미지를 받았습니다!`, 'incorrect');
-            }
-            
-            updateHealthBars();
-            
-            if (player.hp <= 0) {
-                setTimeout(() => showGameOver(), 1000);
-            } else {
-                setTimeout(() => startPlayerTurn(), 1500);
-            }
-        }
+/* =========================================================================
+   학년 선택
+   ========================================================================= */
+let gradeThenStart = false;
+function showGrade(thenStart) {
+    gradeThenStart = thenStart;
+    $("grades").innerHTML = GRADES.map((g, i) => {
+        const wide = i === 0 || i === GRADES.length - 1;
+        return `<button class="${wide ? "wide" : ""}${save.grade === i ? " sel" : ""}" data-g="${i}"><span>${g.icon}</span>${g.name}</button>`;
+    }).join("");
+    show("scr-grade");
+}
+$("grades").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-g]"); if (!b) return;
+    save.grade = +b.dataset.g; persist();
+    Sfx.correct();
+    if (gradeThenStart) startRun(); else showTitle();
+});
 
-        function showDamageEffect() {
-            // 화면 흔들기
-            const container = document.querySelector('.container');
-            if (container) {
-                container.classList.add('screen-shake');
-                setTimeout(() => {
-                    container.classList.remove('screen-shake');
-                }, 500);
-            }
-            
-            // 빨간 플래시
-            const damageFlash = document.getElementById('damage-flash');
-            if (damageFlash) {
-                damageFlash.classList.add('show');
-                setTimeout(() => {
-                    damageFlash.classList.remove('show');
-                }, 600);
-            }
-        }
+/* =========================================================================
+   상점
+   ========================================================================= */
+function showShop() {
+    $("shopCoins").textContent = `🪙 ${fmt(save.coins)}`;
+    $("shopList").innerHTML = `<div class="shop-note">모험에서 번 코인으로 영원히 강해져요!</div>` + SHOP.map(it => {
+        const l = save.shop[it.id], maxed = l >= it.max, price = it.price(l);
+        const now = shopValue[it.id](l), next = maxed ? "" : ` → ${shopValue[it.id](l + 1)}`;
+        return `<div class="item panel">
+            <div class="ic">${it.icon}</div>
+            <div class="tx"><b>${it.name}</b><span>${it.per} · 지금 ${now}${next}</span>
+                <div class="lv-dots">${Array.from({ length: it.max }, (_, k) => `<i class="${k < l ? "on" : ""}"></i>`).join("")}</div></div>
+            <button class="btn gold" data-buy="${it.id}" ${maxed || save.coins < price ? "disabled" : ""}>${maxed ? "최대" : `🪙 ${fmt(price)}`}</button>
+        </div>`;
+    }).join("");
+    show("scr-shop");
+}
+$("shopList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-buy]"); if (!b) return;
+    const it = SHOP.find(x => x.id === b.dataset.buy), l = save.shop[it.id], price = it.price(l);
+    if (l >= it.max || save.coins < price) return;
+    save.coins -= price; save.shop[it.id]++; persist();
+    Sfx.coin(); toast(`${it.icon} ${it.name} 강화!`);
+    showShop();
+});
+$("shopBack").onclick = () => { Sfx.key(); showTitle(); };
 
-        function startPlayerTurn() {
-            playerTurn = true;
-            correctAnswers = 0;
-            battleTimer = player.timeLimit;
-            
-            const turnDisplay = document.getElementById('turn-display');
-            if (turnDisplay) turnDisplay.textContent = '플레이어';
-            
-            // 플레이어 턴 시작 알림 표시 (첫 턴 제외)
-            if (comboCount > 0 || currentMonster.hp < stageData[currentStage - 1].hp) {
-                showPlayerTurnOverlay();
-                setTimeout(() => {
-                    hidePlayerTurnOverlay();
-                    generateProblem();
-                    startTimer();
-                }, 1500);
-            } else {
-                // 첫 턴이면 바로 시작
-                generateProblem();
-                startTimer();
-            }
-        }
+/* =========================================================================
+   한 판(런)
+   ========================================================================= */
+let run = null;
+function newRun() {
+    const sh = save.shop, g = save.grade;
+    const ops = {};
+    OP_KEYS.forEach(op => { ops[op] = GRADES[g].first.includes(op) ? gradeStart(g, op) : 0; });
+    return {
+        grade: g, cycle: save.cycle || 1, stage: 1, ops,
+        maxHp: 100 + sh.hp * 20, hp: 100 + sh.hp * 20,
+        atk: 20 + sh.atk * 4, def: sh.def * 2, critMult: 1.5 + sh.crit * .1, timeBonus: sh.time * .5,
+        hitsNeeded: HITS_FOR_CRIT, hintBoost: false,
+        guard: 0, shield: 0, reflect: 0, freeze: 0, vamp: 0, combo3: false,
+        score: 0, stageScore: 0, correct: 0, combo: 0, maxCombo: 0, bonusCoins: 0,
+    };
+}
+const activeOps = () => OP_KEYS.filter(op => run.ops[op] > 0);
+const dmgMult = (op, level) => 1 + LEVEL_DMG_BONUS * Math.max(0, level - gradeStart(run.grade, op));
 
-        function showPlayerTurnOverlay() {
-            const overlay = document.getElementById('turn-change-overlay');
-            const text = document.getElementById('turn-change-text');
-            if (overlay && text) {
-                text.textContent = '플레이어 턴!';
-                text.style.color = '#2196F3';
-                text.style.borderColor = '#2196F3';
-                overlay.classList.add('show');
-            }
-        }
+function startRun() {
+    run = newRun();
+    if (save.shop.gift) showGift(); else startStage();
+}
 
-        function hidePlayerTurnOverlay() {
-            const overlay = document.getElementById('turn-change-overlay');
-            if (overlay) {
-                overlay.classList.remove('show');
-            }
-        }
+/* =========================================================================
+   전투
+   ========================================================================= */
+const B = {
+    mon: null, monHp: 0, monMax: 0, monAtk: 0,
+    phase: "idle",        // idle | ready | answer | busy
+    hits: 0, turnNo: 0, queue: [], qi: 0, problem: null,
+    limit: 10, time: 0, timer: null, paused: false,
+    cells: [], cur: 0, dir: 1, memo: [], memoSel: -1,   // 답칸 · 세로셈 메모칸
+    token: 0,             // 전투를 나가면 진행 중이던 연출을 멈추기 위한 표시
+};
+const alive = (tk) => tk === B.token && $("scr-battle").classList.contains("on");
 
-        function showVictory() {
-            gameState = 'result';
-            const coinsEarned = 50 + (currentStage * 10);
-            
-            const resultTitle = document.getElementById('result-title');
-            const finalCorrect = document.getElementById('final-correct');
-            const earnedCoins = document.getElementById('earned-coins');
-            const benefitSelection = document.getElementById('benefit-selection');
-            const nextStageBtn = document.getElementById('next-stage-btn');
-            
-            if (resultTitle) resultTitle.textContent = '승리!';
-            if (finalCorrect) finalCorrect.textContent = correctAnswers;
-            if (earnedCoins) earnedCoins.textContent = coinsEarned;
-            
-            // 베네핏 선택 항상 표시
-            if (benefitSelection) benefitSelection.style.display = 'block';
-            
-            // 다음 스테이지 버튼은 베네핏 선택 후에만 표시
-            if (nextStageBtn) {
-                nextStageBtn.style.display = 'none';
-                if (currentStage >= 10) {
-                    nextStageBtn.textContent = '게임 클리어!';
-                } else {
-                    nextStageBtn.textContent = '다음 스테이지';
-                }
-            }
-            
-            if (currentStage === maxUnlockedStage && currentStage < 10) {
-                maxUnlockedStage++;
-            }
-            
-            generateBenefitOptions();
-            showScreen('result-screen');
-        }
+function startStage() {
+    B.token++;
+    stopTimer();
+    const st = STAGES[run.stage - 1], ms = monStats(run.stage, run.cycle);
+    B.mon = st; B.monMax = ms.hp; B.monHp = ms.hp; B.monAtk = ms.atk;
+    B.turnNo = 0; B.paused = false; B.problem = null; B.cells = []; B.memo = [];
+    run.stageScore = 0; run.combo = 0;
+    $("scene").querySelector(".scene-bg").innerHTML = sceneHTML(st);
+    $("battleTitle").textContent = `STAGE ${run.stage}/${STAGE_COUNT} · ${st.place}`;
+    $("monSvg").innerHTML = monsterSVG(st);
+    $("monName").textContent = st.name;
+    $("monActor").className = "actor monster";
+    $("heroActor").className = "actor hero";
+    $("question").innerHTML = ""; $("hint").textContent = ""; $("opTag").textContent = ""; $("secText").textContent = "";
+    renderStats(); renderHp(true); renderCombo(); renderScore(); setTimerBar(1);
+    B.hits = 0; renderDots();
+    setPad(false);
+    show("scr-battle");
+    showReady();
+}
 
-        function showGameOver() {
-            gameState = 'result';
-            maxUnlockedStage = 1;
-            player = {
-                hp: 100,
-                maxHp: 100,
-                attack: 20,
-                critical: 30,
-                timeLimit: 30,
-                defense: 0,
-                shield: 0
-            };
-            
-            const resultTitle = document.getElementById('result-title');
-            const finalCorrect = document.getElementById('final-correct');
-            const earnedCoins = document.getElementById('earned-coins');
-            const benefitSelection = document.getElementById('benefit-selection');
-            const nextStageBtn = document.getElementById('next-stage-btn');
-            
-            if (resultTitle) resultTitle.textContent = '패배...';
-            if (finalCorrect) finalCorrect.textContent = correctAnswers;
-            if (earnedCoins) earnedCoins.textContent = '0';
-            if (benefitSelection) benefitSelection.style.display = 'none';
-            if (nextStageBtn) nextStageBtn.style.display = 'none';
-            
-            showScreen('result-screen');
-        }
+function makeProblemFor(op) {
+    const level = run.ops[op];
+    const p = { op, level, hint: 0, ...LEVELS[op][level - 1].gen() };
+    const boost = run.hintBoost && p.form !== "blank" && p.ans.length >= 3 ? 1 : 0;   // 💡 힌트 돋보기
+    p.hints = Math.max(0, Math.min(p.ans.length - 1, p.hint + boost));
+    p.exp = expectedTime(p, run.grade);
+    return p;
+}
+function makeProblem(last) {
+    const ops = activeOps();
+    let p, tries = 0;
+    do { p = makeProblemFor(pick(ops)); } while (last && p.full === last.full && ++tries < 6);
+    return p;
+}
 
-        function generateBenefitOptions() {
-            const benefitContainer = document.getElementById('benefit-options');
-            if (!benefitContainer) return;
-            
-            benefitContainer.innerHTML = '';
-            
-            const shuffled = [...benefits].sort(() => 0.5 - Math.random());
-            const selectedBenefits = shuffled.slice(0, 3);
-            
-            selectedBenefits.forEach((benefit, index) => {
-                const card = document.createElement('div');
-                card.className = 'benefit-card';
-                card.innerHTML = `
-                    <h4>${benefit.name}</h4>
-                    <p>${benefit.desc}</p>
-                `;
-                card.onclick = () => selectBenefit(benefit);
-                benefitContainer.appendChild(card);
-            });
-        }
+/* 턴 시작 전 준비 카드 */
+function showReady() {
+    B.phase = "ready"; setPad(false);
+    B.turnNo++;
+    B.hits = 0; renderDots();
+    B.queue = []; B.qi = 0;
+    for (let i = 0; i < run.hitsNeeded; i++) B.queue.push(makeProblem(B.queue[i - 1]));
+    const first = B.turnNo === 1;
+    const opsRows = activeOps().map(op => {
+        const lv = run.ops[op], o = OPS[op];
+        // 문제마다 시간이 달라서 몇 개 뽑아 범위로 보여줌
+        const ts = [...B.queue.filter(p => p.op === op), ...Array.from({ length: 8 }, () => makeProblemFor(op))]
+            .map(p => timeLimit(p, run.stage, run.cycle, run.timeBonus));
+        const lo = Math.min(...ts), hi = Math.max(...ts);
+        const m = dmgMult(op, lv);
+        return `<div class="r-op" style="--oc:${o.color}"><b>${o.icon} ${o.name} Lv${lv}</b><span>${LEVELS[op][lv - 1].desc}${m > 1 ? ` · 데미지 ×${m.toFixed(2)}` : ""}</span><em>⏱ ${lo === hi ? lo : `${lo}~${hi}`}초</em></div>`;
+    }).join("");
+    const extras = [run.guard && `🔰 ${run.guard}번 틀려도 괜찮아요`, run.freeze && `⏸️ 시간 멈춤 ${run.freeze}번`].filter(Boolean).join(" · ");
+    $("ready").innerHTML = `<div class="ready-card panel">
+        <div class="r-title">${first ? `${jo(B.mon.name, "이", "가")} 나타났다!` : `용사의 ${B.turnNo}번째 턴`}</div>
+        <div class="r-sub">${first ? `❤️ ${B.monMax} · ⚔️ ${B.monAtk}` : `${B.mon.name} ❤️ ${B.monHp} / ${B.monMax}`}</div>
+        <div class="r-queue">${B.queue.map((p, i) => `<span class="${i === B.queue.length - 1 ? "crit" : ""}" style="--oc:${OPS[p.op].color};animation-delay:${i * .06}s">${OPS[p.op].icon}</span>`).join("")}</div>
+        <div class="r-ops">${opsRows}</div>
+        <div class="r-tip">${run.hitsNeeded}번 맞히면 💥크리티컬! 틀리면 몬스터 차례예요${extras ? `<br>${extras}` : ""}</div>
+        <button class="btn big pink" id="readyGo">준비됐어요! ▶</button>
+    </div>`;
+    $("ready").classList.add("on");
+    const tk = B.token;
+    $("readyGo").onclick = () => {
+        if (!alive(tk) || B.phase !== "ready") return;
+        $("ready").classList.remove("on");
+        Sfx.turn();
+        nextProblem(tk);
+    };
+}
 
-        function selectBenefit(benefit) {
-            benefit.effect();
-            
-            const benefitSelection = document.getElementById('benefit-selection');
-            if (benefitSelection) {
-                benefitSelection.innerHTML = `
-                    <h3 style="color: #28A745; margin-bottom: 15px;">✓ 선택 완료: ${benefit.name}</h3>
-                    <p style="font-size: 1.1em; color: #495057;">${benefit.desc}</p>
-                `;
-            }
-            
-            // 베네핏 선택 후 다음 스테이지 버튼 표시
-            const nextStageBtn = document.getElementById('next-stage-btn');
-            if (nextStageBtn) {
-                nextStageBtn.style.display = 'inline-block';
-            }
-        }
+function nextProblem(tk) {
+    if (B.qi >= B.queue.length) B.queue.push(makeProblem(B.queue[B.queue.length - 1]));
+    const p = B.problem = B.queue[B.qi];
+    B.limit = timeLimit(p, run.stage, run.cycle, run.timeBonus);
+    B.time = B.limit;
+    setupCells(p);
+    const o = OPS[p.op];
+    $("opTag").textContent = `${o.icon} ${o.name} Lv${p.level}`;
+    $("opTag").style.setProperty("--oc", o.color);
+    $("hint").textContent = p.form === "v" ? "← 일의 자리부터 · 위 작은 칸은 메모용" : p.form === "blank" ? "□에 들어갈 숫자를 찾아요" : "";
+    B.phase = "answer"; setPad(true);
+    renderQuestion(); setTimerBar(1);
+    startTimer(tk);
+}
 
-        function nextStage() {
-            // 다음 스테이지 시작 시 콤보 리셋
-            comboCount = 0;
-            
-            if (currentStage < 10) {
-                // 다음 스테이지로 자동 이동
-                currentStage++;
-                const stage = stageData[currentStage - 1];
-                currentMonster = { ...stage };
-                
-                // 전투 준비 화면 업데이트
-                document.getElementById('monster-display').textContent = stage.monster;
-                document.getElementById('monster-display').style.background = `linear-gradient(45deg, ${stage.color}, ${stage.color}99)`;
-                document.getElementById('monster-name').textContent = stage.name;
-                document.getElementById('monster-hp-display').textContent = stage.hp;
-                document.getElementById('monster-attack-display').textContent = stage.attack;
-                document.getElementById('problem-pattern').textContent = stage.pattern;
-                
-                document.getElementById('player-hp-display').textContent = player.hp;
-                document.getElementById('player-maxhp-display').textContent = player.maxHp;
-                document.getElementById('player-attack-display').textContent = player.attack;
-                document.getElementById('player-critical-display').textContent = player.critical;
-                
-                // 준비화면 체력바 업데이트
-                const prepHealthBar = document.getElementById('prep-player-health-bar');
-                if (prepHealthBar) {
-                    const healthPercent = (player.hp / player.maxHp) * 100;
-                    prepHealthBar.style.width = healthPercent + '%';
-                }
-                
-                showScreen('battle-prep');
-            } else {
-                // 게임 클리어
-                alert('🎉 축하합니다! 모든 스테이지를 클리어했습니다! 🎉');
-                showStageSelect();
-            }
-        }
+/* =========================================================================
+   답칸 입력
+   - 가로식·□ 찾기: 왼쪽 칸부터 채우고 오른쪽으로 이동, 끝나면 맨 앞의 빈칸으로
+   - 세로셈: 일의 자리(오른쪽)부터 채우고 왼쪽으로 이동, 끝나면 맨 오른쪽의 빈칸으로
+   - 칸을 누르면 그 칸부터. 힌트 칸은 건너뜀. 모든 칸이 차야 [확인]
+   ========================================================================= */
+const vWidth = (p) => Math.max(p.ans.length, ...p.terms.map(len));
+function setupCells(p) {
+    B.cells = p.ans.split("").map((d, i) => ({ d: i < p.hints ? d : null, hint: i < p.hints, res: "" }));
+    B.dir = p.form === "v" ? -1 : 1;
+    B.memo = p.form === "v" ? Array(vWidth(p)).fill(null) : [];
+    B.memoSel = -1;
+    B.cur = firstEmpty();
+}
+const editable = () => B.cells.map((_, i) => i).filter(i => !B.cells[i].hint);
+const dirOrder = () => B.dir > 0 ? editable() : editable().reverse();
+function firstEmpty() { const o = dirOrder(); const j = o.find(i => B.cells[i].d == null); return j ?? o[0]; }
+const allFilled = () => B.cells.every(c => c.d != null);
+function inputDigit(k) {
+    const n = B.cells.length;
+    B.cells[B.cur].d = k;
+    let j = B.cur + B.dir;
+    while (j >= 0 && j < n && B.cells[j].hint) j += B.dir;
+    if (j < 0 || j >= n) j = dirOrder().find(i => B.cells[i].d == null) ?? B.cur;
+    B.cur = j;
+}
+function backspace() {
+    const n = B.cells.length;
+    if (B.cells[B.cur].d != null) { B.cells[B.cur].d = null; return; }
+    let j = B.cur - B.dir;
+    while (j >= 0 && j < n && B.cells[j].hint) j -= B.dir;
+    if (j >= 0 && j < n) { B.cur = j; B.cells[j].d = null; }
+}
+function moveCur(step) {   // 화살표 키: 화면 기준 왼쪽(-1) · 오른쪽(+1)
+    const e = editable(), k = e.indexOf(B.cur) + step;
+    if (k >= 0 && k < e.length) { B.cur = e[k]; B.memoSel = -1; renderQuestion(); }
+}
+$("question").addEventListener("click", (e) => {
+    if (B.phase !== "answer" || B.paused) return;
+    const m = e.target.closest(".memo");
+    if (m) { B.memoSel = B.memoSel === +m.dataset.m ? -1 : +m.dataset.m; Sfx.key(); renderQuestion(); return; }
+    const c = e.target.closest(".cell");
+    if (c && !B.cells[+c.dataset.i].hint) { B.cur = +c.dataset.i; B.memoSel = -1; Sfx.key(); renderQuestion(); }
+});
+const answerText = (p) => p.form === "blank" ? p.full : p.ans;
 
-        // 이벤트 리스너들
-        document.addEventListener('DOMContentLoaded', function() {
-            const submitBtn = document.getElementById('submit-btn');
-            if (submitBtn) {
-                submitBtn.addEventListener('click', submitAnswer);
-                submitBtn.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    submitAnswer();
-                });
-            }
+function renderStats() {
+    $("heroStat").textContent = `⚔️${run.atk} 🛡️${run.def}`;
+    $("monStat").textContent = `⚔️${B.monAtk}`;
+    const b = [
+        run.guard && `🔰×${run.guard}`, run.shield && `🫧×${run.shield}`, run.reflect && `🪞×${run.reflect}`,
+        run.freeze && `⏸️×${run.freeze}`, run.vamp && `🧛+${run.vamp}`, run.combo3 && "🔥콤보", run.hitsNeeded < HITS_FOR_CRIT && `🍀${run.hitsNeeded}`, run.hintBoost && "💡힌트",
+    ].filter(Boolean);
+    $("buffs").innerHTML = b.map(x => `<span>${x}</span>`).join("");
+}
+function renderHp(instant) {
+    const hp = Math.max(0, run.hp) / run.maxHp * 100, mp = Math.max(0, B.monHp) / B.monMax * 100;
+    $("heroFill").style.width = hp + "%"; $("monFill").style.width = mp + "%";
+    const ghost = () => { $("heroGhost").style.width = hp + "%"; $("monGhost").style.width = mp + "%"; };
+    instant ? ghost() : requestAnimationFrame(ghost);
+    $("heroHpText").textContent = `${Math.max(0, run.hp)} / ${run.maxHp}`;
+    $("monHpText").textContent = `${Math.max(0, B.monHp)} / ${B.monMax}`;
+}
+function renderDots() {
+    let h = "";
+    for (let i = 1; i <= run.hitsNeeded; i++) {
+        const last = i === run.hitsNeeded;
+        h += `<b class="${i <= B.hits ? "on" : ""}${last ? " last" : ""}">${last ? "💥" : "★"}</b>`;
+    }
+    $("dots").innerHTML = h;
+}
+function renderCombo(pop) {
+    const c = $("combo");
+    c.textContent = run.combo >= 2 ? `🔥${run.combo}콤보` : "";
+    if (pop && run.combo >= 2) play(c, "pop", 300);
+}
+function renderScore(pop) { $("scoreText").textContent = `⭐ ${fmt(run.score)}`; if (pop) play($("scoreText"), "pop", 300); }
+function cellHTML(i) {
+    const c = B.cells[i];
+    const cur = B.phase === "answer" && i === B.cur && B.memoSel < 0 && !c.hint;
+    return `<button class="cell${c.hint ? " given" : ""}${c.res ? " " + c.res : ""}${cur ? " cur" : ""}" data-i="${i}">${c.d ?? ""}</button>`;
+}
+function renderQuestion() {
+    const p = B.problem, el = $("question");
+    if (!p) { el.innerHTML = ""; return; }
+    let html, size = 0;
+    if (p.form === "v") {
+        const W = vWidth(p), pad = (n) => "<span></span>".repeat(Math.max(0, n));
+        const row = (n) => pad(W - len(n)) + String(n).split("").map(d => `<span>${d}</span>`).join("");
+        const memos = B.memo.map((m, c) => c === W - 1 ? "<span></span>" : `<button class="memo${B.memoSel === c ? " cur" : ""}" data-m="${c}">${m ?? ""}</button>`).join("");
+        html = `<div class="vgrid" style="--cols:${W + 1}">
+            <span></span>${memos}
+            <span></span>${row(p.terms[0])}
+            <span class="sym">${p.sym}</span>${row(p.terms[1])}
+            <div class="vline"></div>
+            <span></span>${pad(W - p.ans.length)}${B.cells.map((_, i) => cellHTML(i)).join("")}
+        </div>`;
+    } else if (p.form === "blank") {
+        let k = 0;
+        const tok = (t) => `<span class="tok">${p.parts[t].map(ch => ch === null ? cellHTML(k++) : ch).join("")}</span>`;
+        html = `<div class="qh">${tok(0)}<span>${p.sym}</span>${tok(1)}<span>=</span>${tok(2)}</div>`;
+        size = p.full.length;
+    } else {
+        html = `<div class="qh"><span>${p.q}</span><span>=</span><span class="cells">${B.cells.map((_, i) => cellHTML(i)).join("")}</span></div>`;
+        size = p.q.length + p.ans.length * 1.4 + 2;
+    }
+    el.classList.toggle("long", size > 11 && size <= 16);
+    el.classList.toggle("xlong", size > 16);
+    el.innerHTML = html;
+    document.querySelector(".key.ok").classList.toggle("wait", !allFilled());
+}
+function setPad(on) { $("pad").classList.toggle("off", !on); }
+function setTimerBar(ratio) {
+    $("timer").firstElementChild.style.width = Math.max(0, ratio) * 100 + "%";
+    $("timer").classList.toggle("low", ratio <= .3 && ratio > 0);
+    $("secText").textContent = B.problem ? `⏱ ${Math.max(0, B.time).toFixed(1)}초` : "";
+}
+function banner(text, color) {
+    return new Promise(res => {
+        const b = $("banner");
+        b.firstElementChild.textContent = text;
+        b.style.setProperty("--bb", color);
+        play(b, "show", 1100);
+        Sfx.turn();
+        setTimeout(res, 1100);
+    });
+}
 
-            const answerInput = document.getElementById('answer-input');
-            if (answerInput) {
-                answerInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        submitAnswer();
-                    }
-                });
-                
-                answerInput.addEventListener('focus', function() {
-                    console.log('Input focused');
-                });
-                
-                answerInput.addEventListener('click', function() {
-                    this.focus();
-                });
-            }
-        });
+function startTimer(tk) {
+    stopTimer();
+    let lastSec = Math.ceil(B.time);
+    B.timer = setInterval(() => {
+        if (!alive(tk)) { stopTimer(); return; }
+        if (B.paused || B.phase !== "answer") return;
+        B.time -= .1;
+        setTimerBar(B.time / B.limit);
+        const sec = Math.ceil(B.time);
+        if (sec !== lastSec) { lastSec = sec; if (sec <= 3 && sec > 0) Sfx.tick(); }
+        if (B.time <= 0) miss(tk, true);
+    }, 100);
+}
+function stopTimer() { clearInterval(B.timer); B.timer = null; }
 
-        document.addEventListener('keydown', (e) => {
-            if (gameState === 'battle' && e.key === 'Enter') {
-                e.preventDefault();
-                submitAnswer();
-            }
-        });
+function press(k) {
+    if (B.phase !== "answer" || B.paused) return;
+    if (k === "ok") {
+        if (allFilled()) submit();
+        else { play($("question"), "shake", 400); Sfx.wrong(); toast("빈칸을 모두 채워요!"); }
+        return;
+    }
+    Sfx.key();
+    if (B.memoSel >= 0) { B.memo[B.memoSel] = k === "del" ? null : k; B.memoSel = -1; }
+    else if (k === "del") backspace();
+    else inputDigit(k);
+    renderQuestion();
+}
+$("pad").addEventListener("click", (e) => { const key = e.target.closest(".key"); if (key) press(key.dataset.k); });
+document.addEventListener("keydown", (e) => {
+    if (!$("scr-battle").classList.contains("on") || $("modal").classList.contains("on")) return;
+    if (B.phase === "ready" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); $("readyGo")?.click(); return; }
+    if (B.phase === "answer" && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); moveCur(e.key === "ArrowLeft" ? -1 : 1); return; }
+    let k = null;
+    if (/^[0-9]$/.test(e.key)) k = e.key;
+    else if (e.key === "Backspace") k = "del";
+    else if (e.key === "Enter") k = "ok";
+    if (!k) return;
+    e.preventDefault();
+    const btn = document.querySelector(`.key[data-k="${k}"]`);
+    if (btn) play(btn, "down", 120);
+    press(k);
+});
 
-        window.onload = () => {
-            updateStageGrid();
-        };
-    </script>
+function submit() {
+    const tk = B.token, p = B.problem;
+    B.phase = "busy"; setPad(false);
+    B.cells.forEach((c, i) => { if (!c.hint) c.res = c.d === p.ans[i] ? "ok" : "bad"; });   // 자리마다 맞았는지 표시
+    renderQuestion();
+    if (B.cells.map(c => c.d).join("") === p.ans) onCorrect(tk);
+    else miss(tk, false);
+}
+
+async function onCorrect(tk) {
+    const p = B.problem;
+    B.hits++; run.combo++; run.correct++;
+    run.maxCombo = Math.max(run.maxCombo, run.combo);
+    const crit = B.hits >= run.hitsNeeded;
+    let dmg = run.atk * dmgMult(p.op, p.level);
+    if (run.combo3 && run.combo % 3 === 0) dmg *= 2;
+    if (crit) dmg *= run.critMult;
+    dmg = Math.round(dmg);
+    const pts = scoreFor(p.level, B.limit - B.time, p.exp, run.combo, run.cycle);
+    run.score += pts; run.stageScore += pts;
+    renderDots(); renderCombo(true); renderScore(true);
+    $("hint").textContent = `+${fmt(pts)}점${run.combo3 && run.combo % 3 === 0 ? " 🔥불꽃 콤보!" : ""}`;
+    Sfx.correct();
+    await wait(200); if (!alive(tk)) return;
+
+    play($("heroActor"), "lunge-r", 450);
+    await wait(180); if (!alive(tk)) return;
+    B.monHp = Math.max(0, B.monHp - dmg);
+    crit ? Sfx.crit() : Sfx.hit();
+    slashAt($("monActor"), crit);
+    play($("monActor"), "ouch", 450);
+    floatText($("monActor"), crit ? `💥${dmg}` : `-${dmg}`, crit ? "crit" : "");
+    if (run.vamp && run.hp < run.maxHp) { heal(run, run.vamp); floatText($("heroActor"), `+${run.vamp}`, "heal"); }
+    if (crit) { play($("flash"), "white", 350); play($("app"), "shake", 400); vibrate(60); }
+    renderHp();
+    await wait(crit ? 650 : 420); if (!alive(tk)) return;
+
+    if (B.monHp <= 0) { stageClear(tk); return; }
+    B.qi++;
+    if (crit) {
+        await banner("크리티컬!", "#f97316");
+        if (!alive(tk)) return;
+        monsterTurn(tk);
+        return;
+    }
+    nextProblem(tk);
+}
+
+/* 오답 또는 시간 초과 */
+async function miss(tk, timeout) {
+    B.phase = "busy"; setPad(false);
+    if (timeout && run.freeze > 0) {          // ⏸️ 시간 멈춤
+        run.freeze--; renderStats();
+        B.time = 5; B.limit = Math.max(B.limit, 5);
+        Sfx.block(); toast("⏸️ 시간 멈춤! 5초 더!");
+        B.phase = "answer"; setPad(true); renderQuestion();
+        return;
+    }
+    run.combo = 0; renderCombo();
+    if (timeout) { setTimerBar(0); renderQuestion(); }
+    Sfx.wrong();
+    if (run.guard > 0) {                      // 🔰 괜찮아 부적
+        run.guard--; renderStats();
+        $("hint").textContent = `🔰 괜찮아! 정답은 👉 ${answerText(B.problem)}`;
+        await wait(1500); if (!alive(tk)) return;
+        B.qi++;
+        nextProblem(tk);
+        return;
+    }
+    $("hint").textContent = `${timeout ? "시간이 다 됐어요!" : "아쉬워요!"} 정답은 👉 ${answerText(B.problem)}`;
+    await wait(1500); if (!alive(tk)) return;
+    monsterTurn(tk);
+}
+
+async function monsterTurn(tk) {
+    B.phase = "busy"; setPad(false);
+    await banner(`${B.mon.name}의 공격!`, "#dc2626");
+    if (!alive(tk)) return;
+    play($("monActor"), "lunge-l", 450);
+    await wait(180); if (!alive(tk)) return;
+    if (run.reflect > 0) {
+        run.reflect--;
+        B.monHp = Math.max(0, B.monHp - B.monAtk);
+        Sfx.block();
+        floatText($("heroActor"), "🪞 반사!", "heal");
+        play($("monActor"), "ouch", 450);
+        floatText($("monActor"), `-${B.monAtk}`, "");
+    } else if (run.shield > 0) {
+        run.shield--;
+        Sfx.block();
+        floatText($("heroActor"), "🫧 막았다!", "heal");
+    } else {
+        const dmg = Math.max(1, B.monAtk - run.def);
+        run.hp = Math.max(0, run.hp - dmg);
+        Sfx.hurt();
+        play($("heroActor"), "ouch", 450);
+        play($("flash"), "red", 450);
+        play($("app"), "shake", 400);
+        floatText($("heroActor"), `-${dmg}`, "");
+        vibrate(120);
+    }
+    renderHp(); renderStats();
+    await wait(800); if (!alive(tk)) return;
+    if (B.monHp <= 0) { stageClear(tk); return; }
+    if (run.hp <= 0) {
+        $("heroActor").classList.add("dead");
+        await wait(900); if (!alive(tk)) return;
+        endRun("fallen");
+        return;
+    }
+    showReady();
+}
+
+function slashAt(actor, crit) {
+    const scene = $("scene"), r = actor.getBoundingClientRect(), sr = scene.getBoundingClientRect();
+    const s = document.createElement("div");
+    s.className = "slash" + (crit ? " crit" : "");
+    const size = crit ? 170 : 130;
+    s.style.left = (r.left - sr.left + r.width / 2 - size / 2) + "px";
+    s.style.top = (r.top - sr.top + r.height / 2 - size / 2) + "px";
+    scene.appendChild(s);
+    setTimeout(() => s.remove(), 400);
+    sparks(actor, crit ? 16 : 8, crit ? ["#fde047", "#f97316", "#fff"] : ["#fff", "#fde047"]);
+}
+function sparks(actor, count, colors) {
+    const scene = $("scene"), r = actor.getBoundingClientRect(), sr = scene.getBoundingClientRect();
+    const cx = r.left - sr.left + r.width / 2, cy = r.top - sr.top + r.height / 2;
+    for (let i = 0; i < count; i++) {
+        const d = document.createElement("div");
+        d.className = "spark";
+        const ang = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 70;
+        d.style.left = cx + "px"; d.style.top = cy + "px";
+        d.style.background = pick(colors);
+        d.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+        d.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+        scene.appendChild(d);
+        setTimeout(() => d.remove(), 750);
+    }
+}
+function floatText(actor, text, cls) {
+    const scene = $("scene"), r = actor.getBoundingClientRect(), sr = scene.getBoundingClientRect();
+    const f = document.createElement("div");
+    f.className = "float " + cls;
+    f.textContent = text;
+    f.style.left = (r.left - sr.left + r.width / 2) + "px";
+    f.style.top = (r.top - sr.top + r.height * .1) + "px";
+    scene.appendChild(f);
+    setTimeout(() => f.remove(), 1000);
+}
+
+$("btnQuit").onclick = async () => {
+    Sfx.key();
+    B.paused = true;
+    const yes = await confirmBox("모험을 여기서 끝낼까요?\n지금까지 점수만큼 코인을 받아요.", "끝내기", "계속하기");
+    B.paused = false;
+    if (!yes || !$("scr-battle").classList.contains("on")) return;
+    B.token++; B.phase = "idle"; stopTimer();
+    endRun("quit");
+};
+
+/* =========================================================================
+   스테이지 클리어 → 다음 스테이지 카드 고르기
+   ========================================================================= */
+async function stageClear(tk) {
+    B.phase = "idle"; stopTimer();
+    $("monActor").classList.add("dead");
+    sparks($("monActor"), 22, [B.mon.c[0], B.mon.c[2], "#fde047", "#fff"]);
+    Sfx.win();
+    await wait(900); if (!alive(tk)) return;
+
+    const r = rec(run.grade), st = run.stage;
+    const newBest = run.stageScore > (r.stageBest[st] || 0);
+    if (newBest) r.stageBest[st] = run.stageScore;
+    persist();
+    if (st >= STAGE_COUNT) { endRun("ending"); return; }
+
+    const healed = Math.min(run.maxHp - run.hp, Math.round(run.maxHp * WIN_HEAL));
+    heal(run, healed);
+
+    // 연산 카드 3장: 최대 레벨이 아닌 연산 중 무작위
+    const avail = shuffle(OP_KEYS.filter(op => run.ops[op] < MAX_LEVEL)).slice(0, 3);
+    const choices = avail.map(op => {
+        const cur = run.ops[op], isNew = cur === 0;
+        const next = isNew ? gradeStart(run.grade, op) : cur + 1;
+        const risk = isNew ? 2 : next - gradeStart(run.grade, op);
+        return { op, cur, next, isNew, risk, ...rollReward(run, risk) };
+    });
+    const diffLabel = (risk) => risk >= 4 ? "아주 어려움 🔥🔥" : risk >= 2 ? "어려움 🔥" : "보통";
+
+    overScreen(B.mon, `
+        <h2>STAGE ${st} 클리어!</h2>
+        <div class="sub">${jo(B.mon.name, "을", "를")} 물리쳤어요! 이번 스테이지 <b>${fmt(run.stageScore)}점</b>
+            ${newBest ? `<span class="newrec">🏆 스테이지 최고 기록!</span>` : ""}
+            ${healed ? `<br>❤️ 체력 ${healed} 회복` : ""}</div>
+        <h4>다음 스테이지에 나올 문제와 보상을 골라요!</h4>
+        <div class="choices" id="choices">${choices.map((c, k) => {
+            const o = OPS[c.op];
+            return `<button class="choice ${c.rar}" data-k="${k}">
+                <span class="diff">${diffLabel(c.risk)}</span><span class="rar">${RARITY_NAME[c.rar]}</span>
+                <div class="ch-op" style="--oc:${o.color}"><span class="ic">${o.icon}</span><b>${o.name}</b><small>${c.isNew ? "새로 추가!" : `Lv${c.cur} → ${c.next}`}</small></div>
+                <div class="ch-rw"><span class="ic">${c.rw.icon}</span><div><b>${c.rw.name}</b><small>${descOf(c.rw, run)}</small></div></div>
+                <div class="ch-desc">${o.icon} 다음 문제: ${LEVELS[c.op][c.next - 1].desc}</div>
+            </button>`;
+        }).join("")}</div>`, st === 1 ? 24 : 36);
+
+    $("choices").onclick = (e) => {
+        const b = e.target.closest(".choice"); if (!b) return;
+        const c = choices[+b.dataset.k];
+        run.ops[c.op] = c.next;
+        c.rw.apply(run);
+        Sfx.coin();
+        run.stage++;
+        startStage();
+    };
+}
+
+/* 상점의 '출발 선물': 모험 시작 전에 희귀 이상 보상 1개 */
+function showGift() {
+    const picks = [], seen = new Set();
+    while (picks.length < 3) {
+        const c = rollReward(run, 2, "rare");
+        if (seen.has(c.rw.name)) continue;
+        seen.add(c.rw.name); picks.push(c);
+    }
+    overScreen(STAGES[0], `
+        <h2>🎁 출발 선물</h2>
+        <div class="sub">모험을 떠나기 전에 하나를 골라요!</div>
+        <h4>${GRADES[run.grade].short} · ${run.cycle}회차</h4>
+        <div class="choices" id="choices">${picks.map((c, k) => `<button class="choice gift ${c.rar}" data-k="${k}"><span class="rar">${RARITY_NAME[c.rar]}</span>
+            <div class="ch-rw"><span class="ic">${c.rw.icon}</span><div><b>${c.rw.name}</b><small>${descOf(c.rw, run)}</small></div></div></button>`).join("")}</div>`, 0);
+    $("choices").onclick = (e) => {
+        const b = e.target.closest(".choice"); if (!b) return;
+        picks[+b.dataset.k].rw.apply(run);
+        Sfx.coin();
+        startStage();
+    };
+}
+
+/* =========================================================================
+   모험 끝 (쓰러짐 · 그만둠 · 엔딩)
+   ========================================================================= */
+function endRun(reason) {
+    B.phase = "idle"; stopTimer();
+    const r = rec(run.grade);
+    const ending = reason === "ending";
+    const reached = ending ? STAGE_COUNT : run.stage;
+    const coins = Math.floor(run.score / COIN_RATE) + run.bonusCoins;
+    const newBest = run.score > r.best, newStage = reached > r.bestStage;
+    if (newBest) r.best = run.score;
+    if (newStage) r.bestStage = reached;
+    if (ending) { r.clears++; save.cycleUnlocked = Math.min(MAX_CYCLE, Math.max(save.cycleUnlocked, run.cycle + 1)); }
+    save.coins += coins;
+    persist();
+
+    const head = ending
+        ? `<h2>🎉 마왕을 물리쳤어요!</h2><div class="sub">${run.cycle}회차 엔딩! 마을에 평화가 찾아왔어요.${run.cycle < MAX_CYCLE ? `<br><b>${run.cycle + 1}회차</b>가 열렸어요. 몬스터가 더 강해져요!` : ""}</div>`
+        : `<h2>🏕️ 모험 끝!</h2><div class="sub">${reason === "quit" ? "모험을 잠시 쉬어요." : "용사가 지쳐서 마을로 돌아왔어요."}<br><b>${reached}스테이지</b>까지 갔어요!</div>`;
+    overScreen(ending ? STAGES[STAGE_COUNT - 1] : B.mon || STAGES[0], `
+        ${head}
+        <div>${newBest ? `<span class="newrec">🏆 최고 점수!</span>` : ""}${newStage ? `<span class="newrec">🚩 최고 스테이지!</span>` : ""}</div>
+        <div class="tally">
+            <div class="wide">총 점수<b>⭐ ${fmt(run.score)}</b></div>
+            <div>맞힌 문제<b>${run.correct}개</b></div>
+            <div>최대 콤보<b>${run.maxCombo}</b></div>
+        </div>
+        <div class="coins-got">🪙 +${fmt(coins)}<small>점수 ${fmt(run.score)} ÷ ${COIN_RATE}${run.bonusCoins ? ` + 보너스 ${run.bonusCoins}` : ""} · 지금 ${fmt(save.coins)}코인</small></div>
+        <div class="actions">
+            <button class="btn gold" id="endShop">🛒 상점</button>
+            <button class="btn pink" id="endAgain">🔁 다시 모험</button>
+        </div>
+        <button class="link" id="endHome">처음 화면으로</button>`, ending ? 80 : 0);
+    ending ? Sfx.win() : Sfx.rest();
+    setTimeout(() => Sfx.coin(), 600);
+    $("endShop").onclick = () => { Sfx.key(); showShop(); };
+    $("endAgain").onclick = () => { Sfx.turn(); startRun(); };
+    $("endHome").onclick = () => { Sfx.key(); showTitle(); };
+    run = null;
+}
+
+function overScreen(stage, html, confettiCount) {
+    document.querySelector("#scr-over .scene-bg").innerHTML = sceneHTML(stage);
+    const card = $("overCard");
+    card.style.animation = "none"; void card.offsetWidth; card.style.animation = "";
+    card.innerHTML = html;
+    card.scrollTop = 0;
+    show("scr-over");
+    if (confettiCount) confetti(confettiCount);
+}
+function confetti(count) {
+    const host = $("scr-over");
+    const colors = ["#f43f5e", "#f5c542", "#22c55e", "#3b82f6", "#a855f7", "#fb923c"];
+    for (let i = 0; i < count; i++) {
+        const c = document.createElement("div");
+        c.className = "confetti";
+        c.style.left = Math.random() * 100 + "%";
+        c.style.background = pick(colors);
+        c.style.animationDuration = 2.2 + Math.random() * 1.8 + "s";
+        c.style.animationDelay = Math.random() * .8 + "s";
+        c.style.borderRadius = Math.random() < .5 ? "50%" : "2px";
+        host.appendChild(c);
+        setTimeout(() => c.remove(), 5000);
+    }
+}
+
+syncSoundButtons();
+showTitle();
+</script>
 </body>
 </html>
