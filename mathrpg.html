@@ -1114,7 +1114,7 @@ const Music = {
         const c = Sfx.ctx;
         if (!c) return false;
         if (this.bus) return true;
-        this.bus = c.createGain(); this.bus.gain.value = .55; this.bus.connect(c.destination);
+        this.bus = c.createGain(); this.bus.gain.value = .22;   // 효과음보다 작게 this.bus.connect(c.destination);
         // 멜로디에만 살짝 메아리
         this.echo = c.createDelay(); this.echo.delayTime.value = .28;
         const fb = c.createGain(); fb.gain.value = .25;
