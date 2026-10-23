@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1b1033">
-<title>연산RPG</title>
+<title>Math Effect · 계산으로 떠나는 모험</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
@@ -160,8 +160,14 @@
                      0 9px 0 #b45309, 0 14px 24px rgba(0, 0, 0, .3);
         animation: logoIn .8s cubic-bezier(.2, 1.6, .4, 1) both;
     }
-    .logo .l1 { font-size: 72px; color: #fde047; }
-    .logo .l2 { font-size: 60px; letter-spacing: 2px; }
+    .logo .l1 { font-size: 64px; color: #fde047; letter-spacing: 1px; }
+    .logo .l2 { font-size: 58px; letter-spacing: 2px; }
+    .logo .tag {
+        display: inline-block; margin-top: 14px; padding: 6px 16px; border-radius: 999px;
+        font-size: 19px; letter-spacing: 0; color: #fff8e7; background: rgba(122, 74, 30, .88);
+        text-shadow: none; box-shadow: 0 3px 0 rgba(0, 0, 0, .2);
+    }
+    .top-right { display: flex; gap: 8px; }
     @keyframes logoIn { from { transform: scale(.4) rotate(-6deg); opacity: 0; } }
     #scr-title .actor.hero { left: 6%; bottom: 46%; width: min(32%, 140px); }
     #scr-title .actor.monster { right: 8%; bottom: 46%; width: min(26%, 112px); }
@@ -512,8 +518,11 @@
     <!-- 타이틀 -->
     <section class="screen on" id="scr-title">
         <div class="scene-bg"></div>
-        <div class="top-right"><button class="icon-btn" data-sound aria-label="소리 켜기/끄기">🔊</button></div>
-        <h1 class="logo"><div class="l1">연산</div><div class="l2">RPG</div></h1>
+        <div class="top-right">
+            <button class="icon-btn" id="btnMusic" aria-label="배경음 켜기/끄기">🎵</button>
+            <button class="icon-btn" data-sound aria-label="소리 켜기/끄기">🔊</button>
+        </div>
+        <h1 class="logo"><div class="l1">Math</div><div class="l2">Effect</div><div class="tag">계산으로 떠나는 모험</div></h1>
         <div class="actor hero"><div class="bob" data-svg="hero"></div></div>
         <div class="actor monster"><div class="bob" data-svg="slime"></div></div>
         <div class="menu panel">
@@ -612,7 +621,7 @@
 
 <script>
 /* =========================================================================
-   연산RPG — 세로 스마트폰용 로그라이크 연산 게임
+   Math Effect (계산으로 떠나는 모험) — 세로 스마트폰용 로그라이크 연산 게임
    한 판(런) = 10스테이지. 스테이지를 깰 때마다 [문제 카드 + 보상] 중 하나를 골라
    문제 풀과 능력이 바뀐다. 쓰러지면 점수만큼 코인을 받고, 상점에서 영구 성장한다.
    ========================================================================= */
@@ -1049,7 +1058,162 @@ const Sfx = {
     win()     { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, .2, "triangle", .14, null, i * .12)); },
     rest()    { [523, 440, 392, 523].forEach((f, i) => this.tone(f, .22, "triangle", .1, null, i * .16)); },
 };
-document.addEventListener("pointerdown", () => Sfx.unlock(), { capture: true });
+
+/* =========================================================================
+   배경음 (직접 작곡한 곡을 Web Audio로 연주)
+   - town: 처음 화면·상점 — 밝고 통통 튀는 마을 느낌 (다장조, 100 BPM)
+   - battle: 전투 — 신나고 씩씩한 느낌 (가단조, 138 BPM)
+   악보 한 칸 = 8분음표. "-" 는 앞 음을 늘임, "." 는 쉼표, "|" 는 마디 구분
+   ========================================================================= */
+const SONGS = {
+    town: {
+        bpm: 100,
+        lead: "E5 . G5 . C6 - B5 G5 | A5 - G5 E5 C5 . E5 . | F5 . A5 . C6 - A5 F5 | G5 - . . B4 D5 G5 . |" +
+              "E5 . G5 . E6 - D6 C6 | B5 - G5 . E5 . G5 . | A5 . C6 . F5 . A5 G5 | G5 . F5 . D5 . B4 .",
+        bass: "C3 . G3 . C3 . G3 . | A2 . E3 . A2 . E3 . | F2 . C3 . F2 . C3 . | G2 . D3 . G2 . D3 . |" +
+              "C3 . G3 . C3 . G3 . | E2 . B2 . E2 . B2 . | F2 . C3 . F2 . C3 . | G2 . D3 . G2 . B2 .",
+        bell: ". C5 . E5 . G5 . E5 | . A4 . C5 . E5 . C5 | . F4 . A4 . C5 . A4 | . G4 . B4 . D5 . B4 |" +
+              ". C5 . E5 . G5 . E5 | . E4 . G4 . B4 . G4 | . F4 . A4 . C5 . A4 | . G4 . B4 . D5 . F5",
+        drum: "k h . h k h . h",
+    },
+    battle: {
+        bpm: 138,
+        lead: "A4 . C5 E5 A5 - G5 E5 | F5 - E5 C5 A4 . C5 . | E5 . G5 C6 G5 - E5 C5 | D5 - B4 G4 D5 . G5 . |" +
+              "A5 . A5 G5 E5 . A5 . | C6 - A5 F5 A5 . C6 . | B5 - G5 D5 G5 . B5 . | G#5 - E5 B4 E5 . G#5 .",
+        bass: "A2 A2 A3 A2 A2 A2 A3 A2 | F2 F2 F3 F2 F2 F2 F3 F2 | C3 C3 C4 C3 C3 C3 C4 C3 | G2 G2 G3 G2 G2 G2 G3 G2 |" +
+              "A2 A2 A3 A2 A2 A2 A3 A2 | F2 F2 F3 F2 F2 F2 F3 F2 | G2 G2 G3 G2 G2 G2 G3 G2 | E2 E2 E3 E2 E2 E2 E3 E2",
+        bell: ". A4 . C5 . E5 . C5 | . A4 . C5 . F5 . C5 | . G4 . C5 . E5 . C5 | . G4 . B4 . D5 . B4 |" +
+              ". A4 . C5 . E5 . C5 | . A4 . C5 . F5 . C5 | . G4 . B4 . D5 . B4 | . G#4 . B4 . E5 . B4",
+        drum: "kh h sh h kh kh sh h",
+    },
+};
+const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const hz = (name) => {
+    const m = /^([A-G])(#?)(\d)$/.exec(name);
+    return 440 * 2 ** ((NOTE[m[1]] + (m[2] ? 1 : 0) + (+m[3] + 1) * 12 - 69) / 12);
+};
+function parseTrack(str) {   // → { len, ev: [칸] = { f: 주파수, d: 길이(칸) } }
+    const s = str.replace(/\|/g, " ").trim().split(/\s+/);
+    const ev = [];
+    s.forEach((t, i) => {
+        if (t === "." || t === "-") return;
+        let d = 1; while (s[i + d] === "-") d++;
+        ev[i] = { f: hz(t), d };
+    });
+    return { len: s.length, ev };
+}
+Object.values(SONGS).forEach(song => {
+    ["lead", "bass", "bell"].forEach(k => { song[k] = parseTrack(song[k]); });
+    song.drum = song.drum.split(/\s+/);
+    song.len = song.lead.len;
+});
+
+const Music = {
+    on: true, want: "town", cur: null, timer: null, step: 0, next: 0, bus: null,
+    setup() {
+        const c = Sfx.ctx;
+        if (!c) return false;
+        if (this.bus) return true;
+        this.bus = c.createGain(); this.bus.gain.value = .55; this.bus.connect(c.destination);
+        // 멜로디에만 살짝 메아리
+        this.echo = c.createDelay(); this.echo.delayTime.value = .28;
+        const fb = c.createGain(); fb.gain.value = .25;
+        const wet = c.createGain(); wet.gain.value = .25;
+        this.echo.connect(fb).connect(this.echo);
+        this.echo.connect(wet).connect(this.bus);
+        const buf = c.createBuffer(1, c.sampleRate * .5, c.sampleRate), d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        this.noiseBuf = buf;
+        return true;
+    },
+    play(name) {
+        this.want = name;
+        if (!this.on || Sfx.muted || !this.setup()) { this.stop(); return; }
+        if (this.cur === name) return;
+        this.stop();
+        this.cur = name; this.step = 0; this.next = Sfx.ctx.currentTime + .15;
+        this.timer = setInterval(() => this.tick(), 30);
+    },
+    stop() { clearInterval(this.timer); this.timer = null; this.cur = null; },
+    refresh() { this.cur = null; this.play(this.want); },
+    tick() {
+        const c = Sfx.ctx, song = SONGS[this.cur], dt = 30 / song.bpm;   // 8분음표 길이(초)
+        if (this.next < c.currentTime - .05) this.next = c.currentTime + .05;   // 탭이 멈췄다 돌아오면 한꺼번에 몰려 울리지 않게
+        while (this.next < c.currentTime + .15) {
+            const i = this.step % song.len, t = this.next;
+            const L = song.lead.ev[i], Bs = song.bass.ev[i], Bl = song.bell.ev[i];
+            if (L) this.lead(t, L.f, L.d * dt);
+            if (Bs) this.bass(t, Bs.f, Bs.d * dt);
+            if (Bl) this.bell(t, Bl.f);
+            const dr = song.drum[i % song.drum.length];
+            if (dr.includes("k")) this.kick(t);
+            if (dr.includes("s")) this.snare(t);
+            if (dr.includes("h")) this.hat(t);
+            this.step++; this.next += dt;
+        }
+    },
+    env(t, peak, dur, rel = .08) {
+        const g = Sfx.ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(peak, t + .012);
+        g.gain.setTargetAtTime(peak * .6, t + .03, .08);
+        g.gain.setTargetAtTime(0, t + Math.max(.04, dur - .02), rel / 3);
+        return g;
+    },
+    osc(type, f, t, end, g) {
+        const o = Sfx.ctx.createOscillator();
+        o.type = type; o.frequency.value = f;
+        o.connect(g); o.start(t); o.stop(end);
+        return o;
+    },
+    lead(t, f, dur) {
+        const g = this.env(t, .07, dur * .92);
+        g.connect(this.bus); g.connect(this.echo);
+        const tone = Sfx.ctx.createBiquadFilter(); tone.type = "lowpass"; tone.frequency.value = 2600;
+        tone.connect(g);
+        this.osc("square", f, t, t + dur + .3, tone);
+        const sub = Sfx.ctx.createGain(); sub.gain.value = .9; sub.connect(g);
+        this.osc("triangle", f * 2, t, t + dur + .3, sub);
+    },
+    bass(t, f, dur) {
+        const g = this.env(t, .16, dur * .85, .05);
+        g.connect(this.bus);
+        this.osc("triangle", f, t, t + dur + .2, g);
+    },
+    bell(t, f) {   // 마림바 느낌의 짧은 종소리
+        const c = Sfx.ctx, g = c.createGain(), g2 = c.createGain();
+        g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.001, t + .4);
+        g2.gain.setValueAtTime(.015, t); g2.gain.exponentialRampToValueAtTime(.001, t + .08);
+        g.connect(this.bus); g2.connect(this.bus);
+        this.osc("sine", f, t, t + .45, g);
+        this.osc("sine", f * 4, t, t + .1, g2);
+    },
+    kick(t) {
+        const c = Sfx.ctx, o = c.createOscillator(), g = c.createGain();
+        o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + .12);
+        g.gain.setValueAtTime(.32, t); g.gain.exponentialRampToValueAtTime(.001, t + .16);
+        o.connect(g).connect(this.bus); o.start(t); o.stop(t + .18);
+    },
+    noise(t, dur, type, freq, vol) {
+        const c = Sfx.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+        s.buffer = this.noiseBuf; fl.type = type; fl.frequency.value = freq;
+        g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+        s.connect(fl).connect(g).connect(this.bus); s.start(t); s.stop(t + dur + .02);
+    },
+    hat(t) { this.noise(t, .04, "highpass", 7500, .045); },
+    snare(t) {
+        this.noise(t, .13, "bandpass", 1700, .14);
+        const g = Sfx.ctx.createGain();
+        g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.001, t + .08);
+        g.connect(this.bus);
+        this.osc("triangle", 190, t, t + .1, g);
+    },
+};
+document.addEventListener("pointerdown", () => { Sfx.unlock(); if (!Music.cur) Music.play(Music.want); }, { capture: true });
+document.addEventListener("visibilitychange", () => {   // 다른 앱으로 가면 소리를 멈춤
+    if (!Sfx.ctx) return;
+    document.hidden ? Sfx.ctx.suspend() : Sfx.ctx.resume();
+});
 
 /* =========================================================================
    저장
@@ -1069,11 +1233,16 @@ try {
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 무시 */ } }
 const rec = (g = save.grade) => (save.records[g] ||= { best: 0, bestStage: 0, clears: 0, stageBest: {} });
 Sfx.muted = !!save.muted;
+Music.on = save.music !== false;
 
 /* =========================================================================
    공용
    ========================================================================= */
-function show(id) { document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id)); }
+function show(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id));
+    if (id === "scr-battle") Music.play("battle");
+    else if (id !== "scr-over") Music.play("town");   // 클리어·모험 끝 화면은 앞 곡을 이어서
+}
 function play(el, cls, ms) {
     el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
     setTimeout(() => el.classList.remove(cls), ms);
@@ -1091,10 +1260,22 @@ function confirmBox(text, yes = "네", no = "아니요") {
         $("modalYes").onclick = () => done(true); $("modalNo").onclick = () => done(false);
     });
 }
-function syncSoundButtons() { document.querySelectorAll("[data-sound]").forEach(b => b.textContent = Sfx.muted ? "🔇" : "🔊"); }
-document.querySelectorAll("[data-sound]").forEach(b => b.addEventListener("click", () => {
+function syncSoundButtons() {
+    document.querySelectorAll("[data-sound]").forEach(b => b.textContent = Sfx.muted ? "🔇" : "🔊");
+    $("btnMusic").style.opacity = Music.on && !Sfx.muted ? 1 : .45;
+}
+document.querySelectorAll("[data-sound]").forEach(b => b.addEventListener("click", () => {   // 🔊 = 모든 소리
     Sfx.muted = !Sfx.muted; save.muted = Sfx.muted; persist(); syncSoundButtons(); Sfx.key();
+    Music.refresh();
 }));
+$("btnMusic").onclick = () => {   // 🎵 = 배경음만
+    Sfx.unlock();
+    if (Sfx.muted) { Sfx.muted = save.muted = false; Music.on = true; }
+    else Music.on = !Music.on;
+    save.music = Music.on; persist(); syncSoundButtons(); Sfx.key();
+    Music.refresh();
+    toast(Music.on ? "🎵 배경음 켜짐" : "🎵 배경음 꺼짐");
+};
 document.querySelectorAll("[data-svg]").forEach(el => { el.innerHTML = el.dataset.svg === "hero" ? SVG.hero() : monsterSVG(STAGES[0]); });
 function jo(word, withB, withoutB) {   // 받침에 맞는 조사: jo("슬라임", "을", "를") → "슬라임을"
     const c = word.charCodeAt(word.length - 1);
@@ -1763,6 +1944,7 @@ function endRun(reason) {
         </div>
         <button class="link" id="endHome">처음 화면으로</button>`, ending ? 80 : 0);
     ending ? Sfx.win() : Sfx.rest();
+    Music.play("town");
     setTimeout(() => Sfx.coin(), 600);
     $("endShop").onclick = () => { Sfx.key(); showShop(); };
     $("endAgain").onclick = () => { Sfx.turn(); startRun(); };
