@@ -3,132 +3,465 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Game Collection</title>
+    <!-- [수정 포인트 1] 브라우저 탭 제목 -->
+    <title>Byoungryeol's Arcade | Web Game Hub</title>
+    
+    <!-- Pretendard 웹폰트 -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: rgba(22, 28, 42, 0.8);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --status-live: #22c55e;
+            --status-off: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.14) 0px, transparent 45%),
+                radial-gradient(at 90% 90%, rgba(236, 72, 153, 0.1) 0px, transparent 45%);
+            color: var(--text-main);
             min-height: 100vh;
+            padding: 48px 20px;
         }
-        
+
         .container {
-            max-width: 800px;
+            max-width: 960px;
             margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        
-        h1 {
+
+        /* 상단 헤더 */
+        header {
             text-align: center;
-            color: #333;
-            font-size: 2.5em;
+            margin-bottom: 48px;
+        }
+
+        .hub-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+
+        .hub-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--status-live);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--status-live);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
         }
-        
+
         .subtitle {
-            text-align: center;
-            color: #666;
-            font-size: 1.2em;
-            margin-bottom: 40px;
+            color: var(--text-sub);
+            font-size: 1.05rem;
         }
-        
+
+        /* 그리드 레이아웃 */
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
         }
-        
+
+        /* 카드 기본 스타일 */
         .game-card {
-            background: linear-gradient(145deg, #f0f0f0, #cacaca);
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: none;
-            cursor: pointer;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            overflow: hidden;
             text-decoration: none;
-            color: #333;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+            position: relative;
         }
-        
+
         .game-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transform: translateY(-6px);
+            border-color: #818cf8;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45), 0 0 20px var(--accent-glow);
         }
-        
-        .game-icon {
-            font-size: 3em;
-            margin-bottom: 15px;
+
+        /* 썸네일 & 비디오 영역 */
+        .thumb-wrapper {
+            position: relative;
+            width: 100%;
+            height: 170px;
+            background: #141923;
+            overflow: hidden;
+            border-bottom: 1px solid var(--card-border);
         }
-        
+
+        /* 썸네일 이미지가 없을 때 보여줄 기본 그래픽 배경 */
+        .thumb-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            transition: transform 0.35s ease;
+        }
+
+        /* 비디오 스타일 (평소에는 숨겨두거나 포스터만 표시) */
+        .preview-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        /* 마우스 올렸을 때 비디오 서서히 나타나기 */
+        .game-card:hover .preview-video.has-video {
+            opacity: 1;
+        }
+
+        .game-card:hover .thumb-fallback {
+            transform: scale(1.06);
+        }
+
+        /* 우측 상단 장르 뱃지 */
+        .genre-tag {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            z-index: 2;
+        }
+
+        /* 좌측 상단 작동 상태 뱃지 */
+        .status-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            z-index: 2;
+            backdrop-filter: blur(6px);
+        }
+
+        /* 정상 작동(LIVE) 상태 스타일 */
+        .status-badge.live {
+            background: rgba(20, 83, 45, 0.8);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #86efac;
+        }
+
+        /* 미작동/점검중(OFFLINE) 상태 스타일 */
+        .status-badge.offline {
+            background: rgba(120, 53, 15, 0.85);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: #fcd34d;
+        }
+
+        /* 작동 안 되는 게임 카드 전용 스타일 (클릭 방지 처리 선택 가능) */
+        .game-card.inactive {
+            opacity: 0.78;
+        }
+
+        .game-card.inactive .thumb-fallback {
+            filter: grayscale(40%);
+        }
+
+        /* 하단 텍스트 영역 */
+        .card-body {
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
         .game-title {
-            font-size: 1.4em;
-            font-weight: bold;
+            font-size: 1.25rem;
+            font-weight: 700;
             margin-bottom: 8px;
+            color: #f8fafc;
         }
-        
-        .game-description {
-            font-size: 0.9em;
-            color: #666;
-            line-height: 1.4;
+
+        .game-desc {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            line-height: 1.5;
+            margin-bottom: 20px;
+            flex-grow: 1;
         }
-        
-        .add-game {
-            background: linear-gradient(145deg, #4CAF50, #45a049);
-            color: white;
-            border: 2px dashed #45a049;
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #818cf8;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
-        .add-game:hover {
-            background: linear-gradient(145deg, #45a049, #4CAF50);
+
+        .game-card.inactive .card-footer {
+            color: #94a3b8;
+        }
+
+        /* 새 게임 슬롯 (Coming Soon) */
+        .game-card.coming-soon {
+            border-style: dashed;
+            background: rgba(15, 23, 42, 0.4);
+            cursor: default;
+        }
+        .game-card.coming-soon:hover {
+            transform: none;
+            border-color: var(--card-border);
+            box-shadow: none;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .game-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>🎮 My Game Collection</h1>
-        <p class="subtitle">즐겁게 플레이할 게임을 선택하세요!</p>
-        
-        <div class="game-grid">
-            <!-- 게임 1 -->
-             <a href="mathrpg.html" class="game-card">
-                <div class="game-icon">⚔️</div>
-                <div class="game-title">연산RPG</div>
-                <div class="game-description">연산문제로 몬스터와 턴제배틀!</div>            
-            </a>
-            
-            <!-- 게임 2 -->
-            <a href="TreasureIsland.html" class="game-card">
-                <div class="game-icon">🏴‍☠️</div>
-                <div class="game-title">보물찾기 게임</div>
-                <div class="game-description">보물섬의 땅을 파서 해적왕의 보물을 찾자</div>
-            </a>
-            
-            <!-- 게임 3 -->
-            <a href="arcade.html" class="game-card">
-                <div class="game-icon">🕹️</div>
-                <div class="game-title">아케이드 게임</div>
-                <div class="game-description">클래식한 아케이드 스타일</div>
-            </a>
-            
-            <!-- 게임 4 -->
-            <a href="rpg.html" class="game-card">
-                <div class="game-icon">🗡️</div>
-                <div class="game-title">RPG 게임</div>
-                <div class="game-description">캐릭터를 키우며 모험을 떠나보세요</div>
-            </a>
-            
-            <!-- 새 게임 추가용 -->
-            <div class="game-card add-game">
-                <div class="game-icon">➕</div>
-                <div class="game-title">새 게임 추가</div>
-                <div class="game-description">곧 새로운 게임이 추가될 예정입니다</div>
+        <header>
+            <div class="hub-badge">
+                <span class="hub-dot"></span>
+                BYOUNGRYEOL85.GITHUB.IO
             </div>
+            <!-- [수정 포인트 2] 메인 타이틀 및 설명 -->
+            <h1>My Game Collection</h1>
+            <p class="subtitle">카드에 마우스를 올리면 플레이 미리보기가 재생됩니다</p>
+        </header>
+
+        <div class="game-grid">
+
+            <!-- ========================================================================= -->
+            <!-- [게임 1: 연산RPG] (정상 작동 상태로 표시된 예시) -->
+            <!-- 
+                 1. href="mathrpg.html" : 이동할 게임 파일 주소
+                 2. poster="썸네일경로.png" : 마우스 올리기 전 보여줄 정지 이미지 (없으면 비워두세요)
+                 3. src="영상경로.mp4" : 마우스 올렸을 때 재생할 짧은 mp4 파일 경로
+            -->
+            <a href="mathrpg.html" class="game-card">
+                <div class="thumb-wrapper">
+                    <!-- 작동 상태 표시: 정상 작동 시 class="status-badge live" -->
+                    <span class="status-badge live">● PLAYABLE</span>
+                    <!-- 장르 표시 -->
+                    <span class="genre-tag">TURN-BASED RPG</span>
+
+                    <!-- 이미지/영상이 아직 없을 때 대신 보여줄 중앙 아이콘 -->
+                    <div class="thumb-fallback">⚔️</div>
+
+                    <!-- [비디오 태그] 영상 파일이 준비되면 class에 "has-video"를 유지하고, src에 파일명을 적으세요 -->
+                    <video class="preview-video has-video" muted loop playsinline preload="metadata" poster="assets/mathrpg-thumb.png">
+                        <source src="assets/mathrpg-preview.mp4" type="video/mp4">
+                    </video>
+                </div>
+
+                <div class="card-body">
+                    <div class="game-title">연산RPG</div>
+                    <div class="game-desc">빠른 사칙연산으로 몬스터와 대결하는 두뇌 회전 턴제 배틀 게임!</div>
+                    <div class="card-footer">
+                        <span>Game Start</span>
+                        <span>&rarr;</span>
+                    </div>
+                </div>
+            </a>
+            <!-- ========================================================================= -->
+
+
+            <!-- ========================================================================= -->
+            <!-- [게임 2: 보물찾기 게임] (정상 작동 상태로 표시된 예시) -->
+            <a href="TreasureIsland.html" class="game-card">
+                <div class="thumb-wrapper">
+                    <span class="status-badge live">● PLAYABLE</span>
+                    <span class="genre-tag">ADVENTURE</span>
+
+                    <div class="thumb-fallback">🏴‍☠️</div>
+
+                    <video class="preview-video has-video" muted loop playsinline preload="metadata" poster="assets/treasure-thumb.png">
+                        <source src="assets/treasure-preview.mp4" type="video/mp4">
+                    </video>
+                </div>
+
+                <div class="card-body">
+                    <div class="game-title">보물찾기 게임</div>
+                    <div class="game-desc">보물섬의 숨겨진 타일을 파내어 해적왕의 보물을 발굴하세요.</div>
+                    <div class="card-footer">
+                        <span>Game Start</span>
+                        <span>&rarr;</span>
+                    </div>
+                </div>
+            </a>
+            <!-- ========================================================================= -->
+
+
+            <!-- ========================================================================= -->
+            <!-- [게임 3: 아케이드 게임] (미작동/점검 중 상태로 표시한 예시) -->
+            <!-- 
+                 작동 안 되는 게임으로 표시하는 방법:
+                 1. <a ... class="game-card inactive"> 처럼 inactive 클래스를 붙여줍니다.
+                 2. 상태 뱃지를 <span class="status-badge offline">⚠️ 점검 중 (파일 준비중)</span> 으로 적습니다.
+            -->
+            <a href="arcade.html" class="game-card inactive">
+                <div class="thumb-wrapper">
+                    <!-- 미작동 표시 뱃지 -->
+                    <span class="status-badge offline">⚠️ 미작동 (점검 중)</span>
+                    <span class="genre-tag">ARCADE</span>
+
+                    <div class="thumb-fallback">🕹️</div>
+
+                    <!-- 영상이 없으면 class에서 has-video를 빼두시면 이모지만 깔끔하게 나옵니다 -->
+                    <video class="preview-video" muted loop playsinline preload="none">
+                        <source src="" type="video/mp4">
+                    </video>
+                </div>
+
+                <div class="card-body">
+                    <div class="game-title">아케이드 게임</div>
+                    <div class="game-desc">클래식한 아케이드 스타일 미니게임 (현재 리뉴얼 및 파일 연결 대기 중)</div>
+                    <div class="card-footer">
+                        <span>접속 불가 (점검 중)</span>
+                        <span>🔒</span>
+                    </div>
+                </div>
+            </a>
+            <!-- ========================================================================= -->
+
+
+            <!-- ========================================================================= -->
+            <!-- [게임 4: RPG 게임] (미작동/점검 중 상태로 표시한 예시) -->
+            <a href="rpg.html" class="game-card inactive">
+                <div class="thumb-wrapper">
+                    <span class="status-badge offline">⚠️ 미작동 (점검 중)</span>
+                    <span class="genre-tag">RPG</span>
+
+                    <div class="thumb-fallback">🗡️</div>
+
+                    <video class="preview-video" muted loop playsinline preload="none">
+                        <source src="" type="video/mp4">
+                    </video>
+                </div>
+
+                <div class="card-body">
+                    <div class="game-title">RPG 게임</div>
+                    <div class="game-desc">캐릭터를 키우며 모험을 떠나는 RPG (현재 빌드 업데이트 준비 중)</div>
+                    <div class="card-footer">
+                        <span>접속 불가 (점검 중)</span>
+                        <span>🔒</span>
+                    </div>
+                </div>
+            </a>
+            <!-- ========================================================================= -->
+
+
+            <!-- ========================================================================= -->
+            <!-- [새 게임 추가 슬롯] -->
+            <div class="game-card coming-soon">
+                <div class="thumb-wrapper">
+                    <span class="genre-tag">COMING SOON</span>
+                    <div class="thumb-fallback">➕</div>
+                </div>
+                <div class="card-body">
+                    <div class="game-title">새 프로젝트</div>
+                    <div class="game-desc">새로운 웹 게임 프로토타입이 이곳에 추가될 예정입니다.</div>
+                    <div class="card-footer">
+                        <span>Preparing...</span>
+                        <span>⏳</span>
+                    </div>
+                </div>
+            </div>
+            <!-- ========================================================================= -->
+
         </div>
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- [자동 제어 스크립트] 
+         1) 마우스를 올리면 MP4 재생 / 떼면 정지 및 처음으로 되감기
+         2) 만약 실제 HTML 게임 파일이 없어서 링크가 깨져 있거나 미작동(inactive) 상태일 때 안내창 띄우기
+    -->
+    <script>
+        document.querySelectorAll('.game-card').forEach(card => {
+            const video = card.querySelector('.preview-video');
+
+            // 마우스를 카드에 올렸을 때 비디오 재생
+            card.addEventListener('mouseenter', () => {
+                if (video && video.classList.contains('has-video')) {
+                    video.play().catch(() => {
+                        // 영상 파일이 아직 폴더에 없더라도 에러 없이 기본 아이콘을 유지합니다.
+                    });
+                }
+            });
+
+            // 마우스를 카드에서 뗐을 때 비디오 일시정지 & 0초로 초기화
+            card.addEventListener('mouseleave', () => {
+                if (video && video.classList.contains('has-video')) {
+                    video.pause();
+                    video.currentTime = 0;
+                }
+            });
+
+            // 'inactive(미작동)' 클래스가 붙은 카드를 클릭하면 404 에러 페이지 대신 안내 메시지 표시
+            card.addEventListener('click', (e) => {
+                if (card.classList.contains('inactive')) {
+                    e.preventDefault(); // 페이지 이동 막기
+                    alert('현재 이 게임은 점검 중이거나 파일이 연결되지 않았습니다.');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
